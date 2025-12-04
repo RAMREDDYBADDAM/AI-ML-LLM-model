@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Financial RAG — Demo</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;margin:24px}
+      textarea{width:100%;height:120px}
+      button{padding:8px 12px;margin-top:8px}
+      pre{background:#f6f8fa;padding:12px;border-radius:6px}
+    </style>
+  </head>
+  <body>
+    <h1>Financial RAG — Demo</h1>
+    <p>Enter a finance question and press <strong>Ask</strong>.</p>
+    <textarea id="question" placeholder="What are Apple's main products?">What are Apple's main products?</textarea>
+    <br />
+    <button id="ask">Ask</button>
+    <h2>Answer</h2>
+    <pre id="answer">(waiting)</pre>
+
+    <script>
+      const askBtn = document.getElementById('ask')
+      const qEl = document.getElementById('question')
+      const out = document.getElementById('answer')
+
+      askBtn.onclick = async () => {
+        out.textContent = 'Loading...'
+        try {
+          const res = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: 'web-demo', question: qEl.value }),
+          })
+          
+          // Check response status
+          if (!res.ok) {
+            const text = await res.text()
+            out.textContent = `HTTP ${res.status} Error:\n${text}`
+            return
+          }
+          
+          // Parse JSON
+          let data
+          try {
+            data = await res.json()
+          } catch (jsonErr) {
+            const text = await res.text()
+            out.textContent = `JSON Parse Error:\n${text}`
+            return
+          }
+          
+          // Display response
+          out.textContent = JSON.stringify(data, null, 2)
+        } catch (err) {
+          out.textContent = 'Network Error: ' + err.message
+        }
+      }
+    </script>
+  </body>
+</html>

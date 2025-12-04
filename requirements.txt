@@ -1,11 +1,25 @@
+fastapi 
+uvicorn[standard] 
+ 
+# Pydantic 
+pydantic 
+pydantic-settings 
+ 
+# LangChain + OpenAI 
+langchain 
+langchain-openai 
+langchain-community 
+ 
+# Vector store 
+chromadb 
+ 
+# Database 
+sqlalchemy 
+psycopg2-binary 
+ 
+# Env 
+python-dotenv 
+ 
+# PDF / docs 
+pymupdf 
 unstructured
-tiktoken
-pinecone-client
-pypdf
-openai
-langchain
-pandas
-numpy
-python-dotenv
-sentence-transformers
-faiss-cpu
