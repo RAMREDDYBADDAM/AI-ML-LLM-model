@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Floating Financial Overview</title>
+    <style>
+      :root{--bg:#f4f6f8;--top:#e9eef6;--tab-active:#fff;--muted:#6b7280}
+      body { font-family: Inter, Segoe UI, Arial, sans-serif; margin: 0; height: 100vh; background: var(--bg); }
+      .browser-frame{max-width:100%;height:100vh;margin:0;border-radius:0;overflow:hidden;background:var(--top);display:flex;flex-direction:column}
+      .browser-top{display:flex;flex-direction:column;padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.06);background:linear-gradient(#f7f9fc,var(--top))}
+      .tabs{display:flex;gap:8px;margin-bottom:8px}
+      .tab{padding:6px 12px;border-radius:6px;color:var(--muted);background:transparent;font-size:13px}
+      .tab.active{background:var(--tab-active);color:#111;box-shadow:0 1px 0 rgba(16,24,40,0.04) inset}
+      .address-toolbar{display:flex;align-items:center;gap:8px}
+      .icon-btn{background:transparent;border:none;padding:6px 8px;border-radius:6px;font-size:14px;cursor:pointer}
+      .address-bar{flex:1;background:#fff;padding:8px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:13px;color:#333}
+      .toolbar-actions{display:flex;gap:6px}
+      .browser-content{flex:1;background:#fff;padding:0;overflow:hidden;position:relative}
+      #stage { position:relative; width:100%; height:100%; overflow:hidden; }
+      .bubble {
+        position:absolute;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:#fff;
+        font-weight:600;
+        box-shadow:0 6px 18px rgba(0,0,0,0.12);
+        cursor:pointer;
+      }
+      .panel { position:absolute; right:20px; top:20px; width:320px; background:#fff; border-radius:8px; padding:12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+      .panel h3 { margin:0 0 8px 0; font-size:16px }
+      .metric { font-size:20px; margin-bottom:6px }
+      .hint { color:#666; font-size:13px }
+    </style>
+  </head>
+  <body>
+    <div class="browser-frame">
+      <div class="browser-top">
+        <div class="tabs">
+          <div class="tab active">Floating Overview</div>
+          <div class="tab">Analytics</div>
+          <div class="tab">Reports</div>
+        </div>
+        <div class="address-toolbar">
+          <button class="icon-btn" title="Back">◀</button>
+          <button class="icon-btn" title="Forward">▶</button>
+          <button class="icon-btn" title="Reload">⟳</button>
+          <div class="address-bar">http://localhost:8000/float</div>
+          <div class="toolbar-actions"><button class="icon-btn">⚙</button></div>
+        </div>
+      </div>
+
+      <div class="browser-content">
+        <div id="stage"></div>
+
+        <div id="upload-overlay" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:9999;top:0;left:0;">
+          <div style="background:#fff;padding:20px;border-radius:8px;min-width:320px;text-align:center;">
+            <h3 style="margin-top:0">Upload Payslip or Invoice</h3>
+            <div style="margin:12px 0;color:#444">Select a PDF or image to extract financial items.</div>
+            <input id="file-input" type="file" accept="application/pdf,image/*" />
+            <div style="margin-top:12px"><button id="skip-upload" style="padding:8px 12px">Skip</button></div>
+            <div id="upload-status" style="margin-top:8px;color:#666;font-size:13px"></div>
+          </div>
+        </div>
+
+        <div class="panel" id="summary">
+          <h3>Financial Summary</h3>
+          <div id="summary-content">Loading...</div>
+          <div class="hint">Click a bubble to see details and suggested allocation.</div>
+        </div>
+
+        <script>
+          function createBubble(item, x, y, size) {
+            const el = document.createElement('div');
+            el.className = 'bubble';
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.style.width = `${size}px`;
+            el.style.height = `${size}px`;
+            const colorMap = { income: '#2b8a3e', expense: '#d9534f', asset: '#337ab7' };
+            el.style.background = colorMap[item.type] || '#666';
+            el.innerText = `$${(item.amount>=1000?Math.round(item.amount/1000)+'k':item.amount)}`;
+            el.title = item.label;
+            el.addEventListener('click', () => showDetails(item));
+            return el;
+          }
+
+          function showDetails(item) {
+            const content = document.getElementById('summary-content');
+            content.innerHTML = `
+              <div class="metric">${item.label}: $${item.amount.toLocaleString()}</div>
+              <div>Type: ${item.type}</div>
+              <div>Suggested: Invest ${Math.round((item.recommended_allocation?.invest||0)*100)}% · Save ${Math.round((item.recommended_allocation?.savings||0)*100)}%</div>
+            `;
+          }
+
+          function layoutBubbles(data) {
+            const stage = document.getElementById('stage');
+            stage.innerHTML = '';
+            const w = stage.clientWidth;
+            const h = stage.clientHeight;
+
+            data.forEach((item) => {
+              const size = Math.max(60, Math.sqrt(item.amount) * 2.2);
+              const x = Math.random() * (w - size - 40) + 20;
+              const y = Math.random() * (h - size - 40) + 20;
+              const bubble = createBubble(item, x, y, size);
+              stage.appendChild(bubble);
+            });
+          }
+
+          function renderPayload(payload) {
+            const data = payload.data || [];
+            const summary = payload.summary || {};
+            document.getElementById('summary-content').innerHTML = `
+              <div class="metric">Disposable: $${(summary.disposable||0).toLocaleString()}</div>
+              <div>Monthly invest suggestion: $${(summary.monthly_invest_suggestion||0).toLocaleString()}</div>
+              <div>Allocation example: Stocks ${Math.round((summary.allocation_example?.stocks||0)*100)}% · Bonds ${Math.round((summary.allocation_example?.bonds||0)*100)}% · Cash ${Math.round((summary.allocation_example?.cash||0)*100)}%</div>
+            `;
+            layoutBubbles(data);
+          }
+
+          fetch('/api/extract')
+            .then(r => r.json())
+            .then(renderPayload)
+            .catch(err => {
+              document.getElementById('summary-content').innerText = 'Failed to load extraction data.';
+              console.error(err);
+            });
+
+          document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('upload-overlay');
+            const input = document.getElementById('file-input');
+            const status = document.getElementById('upload-status');
+            const skip = document.getElementById('skip-upload');
+
+            input.focus();
+
+            input.addEventListener('change', () => {
+              const f = input.files && input.files[0];
+              if (!f) return;
+              status.innerText = `Uploading ${f.name}...`;
+              const fd = new FormData();
+              fd.append('file', f, f.name);
+              fetch('/api/extract/upload', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(payload => {
+                  status.innerText = `Uploaded ${f.name} — received extraction.`;
+                  overlay.style.display = 'none';
+                  if (payload.data) renderPayload(payload);
+                })
+                .catch(err => {
+                  status.innerText = 'Upload failed. Showing demo data.';
+                  console.error(err);
+                  setTimeout(()=> overlay.style.display = 'none', 1500);
+                });
+            });
+
+            skip.addEventListener('click', () => { overlay.style.display = 'none'; });
+          });
+
+          window.addEventListener('resize', () => {
+            fetch('/api/extract').then(r=>r.json()).then(p=>layoutBubbles(p.data||[])).catch(()=>{});
+          });
+        </script>
+      </div>
+    </div>
+  </body>
+</html>

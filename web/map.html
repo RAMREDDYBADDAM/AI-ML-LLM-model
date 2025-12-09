@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Income Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <style>
+      :root{--bg:#f4f6f8;--top:#e9eef6}
+      html,body,#map { height: 100%; margin: 0; padding: 0; }
+      body { background: var(--bg); }
+      .browser-frame{width:100%;height:100vh;display:flex;flex-direction:column;background:var(--top)}
+      .browser-top{display:flex;flex-direction:column;padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.06);background:linear-gradient(#f7f9fc,var(--top))}
+      .tabs{display:flex;gap:8px;margin-bottom:8px}
+      .tab{padding:6px 12px;border-radius:6px;color:#6b7280;background:transparent;font-size:13px}
+      .tab.active{background:#fff;color:#111}
+      .address-toolbar{display:flex;align-items:center;gap:8px}
+      .icon-btn{background:transparent;border:none;padding:6px 8px;border-radius:6px;font-size:14px;cursor:pointer}
+      .address-bar{flex:1;background:#fff;padding:8px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:13px;color:#333}
+      .toolbar-actions{display:flex;gap:6px}
+      .browser-content{flex:1;overflow:hidden}
+      #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+      .legend { background:white; padding:8px; border-radius:4px; box-shadow:0 0 6px rgba(0,0,0,0.2); }
+    </style>
+  </head>
+  <body>
+    <div class="browser-frame">
+      <div class="browser-top">
+        <div class="tabs">
+          <div class="tab">Dashboard</div>
+          <div class="tab active">Income Map</div>
+          <div class="tab">Reports</div>
+        </div>
+        <div class="address-toolbar">
+          <button class="icon-btn" title="Back">◀</button>
+          <button class="icon-btn" title="Forward">▶</button>
+          <button class="icon-btn" title="Reload">⟳</button>
+          <div class="address-bar">http://localhost:8000/map</div>
+          <div class="toolbar-actions"><button class="icon-btn">⚙</button></div>
+        </div>
+      </div>
+
+      <div class="browser-content">
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+      const map = L.map('map').setView([39.5, -98.35], 4);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      function getColor(val, min, max) {
+        const t = (val - min) / (max - min || 1);
+        const r = Math.round(255 * Math.min(1, 2 * t));
+        const g = Math.round(255 * Math.min(1, 2 * (1 - t)));
+        return `rgb(${r},${g},0)`;
+      }
+
+      function getRadius(income) {
+        return Math.max(6, Math.sqrt(income) / 10);
+      }
+
+      fetch('/api/income')
+        .then(r => r.json())
+        .then(payload => {
+          const data = payload.data || [];
+          if (!data.length) return;
+          const incomes = data.map(d => d.income);
+          const min = Math.min(...incomes);
+          const max = Math.max(...incomes);
+
+          const group = L.featureGroup();
+
+          data.forEach(pt => {
+            const color = getColor(pt.income, min, max);
+            const circle = L.circleMarker([pt.lat, pt.lng], {
+              radius: getRadius(pt.income),
+              fillColor: color,
+              color: '#222',
+              weight: 1,
+              fillOpacity: 0.85
+            }).bindPopup(`<strong>${pt.name}</strong><br/>Income: $${pt.income.toLocaleString()}`);
+            circle.addTo(map);
+            group.addLayer(circle);
+          });
+
+          group.addTo(map);
+          map.fitBounds(group.getBounds(), {padding: [40,40]});
+
+          const legend = L.control({position: 'bottomright'});
+          legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `<b>Income</b><br/>Min: $${min.toLocaleString()}<br/>Max: $${max.toLocaleString()}`;
+            return div;
+          };
+          legend.addTo(map);
+        })
+        .catch(err => {
+          console.error('Failed to load income data', err);
+        });
+    </script>
+  </body>
+</html>

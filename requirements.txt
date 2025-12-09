@@ -23,3 +23,6 @@ python-dotenv
 # PDF / docs 
 pymupdf 
 unstructured
+
+# Plotting / visualization
+matplotlib
