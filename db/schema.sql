@@ -7,6 +7,100 @@
 --
 
 -- ============================================================================
+-- EXAMPLE QUERIES YOU CAN ASK THE SYSTEM
+-- ============================================================================
+--
+-- 1️⃣  SQL / ANALYTICS QUESTIONS (Numeric Data & Aggregations)
+-- These questions trigger SQL agent to query the database directly.
+--
+--  📊 Financial Metrics
+--    "What was Apple's revenue in 2024 Q1?"
+--    "Compare Apple's revenue between Q1 and Q2 of 2024."
+--    "What is Apple's total assets and liabilities for 2024-Q2?"
+--    "What is the EPS for Apple for 2024 Q2?"
+--    "Which company has the highest revenue in Q1 2024?"
+--    "Show the revenue growth rate for Apple year-over-year."
+--
+--  🏭 Products
+--    "List Apple's top revenue-contributing products."
+--    "What percentage of Apple's revenue comes from iPhone?"
+--    "When was the MacBook launched?"
+--    "How many products does Apple have in active status?"
+--
+--  📈 Quarterly Reports
+--    "Summarize Apple's Q1 2024 quarterly performance."
+--    "What were the highlights of Apple's Q1 2024 report?"
+--    "Show all quarterly reports for Apple in 2024."
+--
+--  📝 Analyst Ratings
+--    "What did Goldman Sachs rate Apple?"
+--    "What is the latest analyst price target for Apple?"
+--    "List all analyst ratings for Apple."
+--    "What firms have rated Apple and what are their ratings?"
+--
+--  🌍 Market Trends
+--    "What are the top market trends in the Technology sector?"
+--    "Show all market trends with impact score above 7."
+--    "How is AI adoption impacting technology companies?"
+--
+-- ============================================================================
+--
+-- 2️⃣  DOCUMENT / RAG QUESTIONS (Context-based from Vectorstore)
+-- These questions are answered using document embeddings and retrieval.
+--
+--  🎓 Explanations & Context
+--    "Explain Apple's recent financial performance in simple terms."
+--    "What are the major trends affecting the Technology sector?"
+--    "Give a summary of Apple's quarterly highlights."
+--    "What are the risks and opportunities for Apple in 2024?"
+--    "Summarize Apple's business segments and revenue drivers."
+--    "What is Apple's competitive advantage?"
+--    "Explain Apple's supply chain strategy."
+--
+-- ============================================================================
+--
+-- 3️⃣  HYBRID QUESTIONS (SQL + RAG Combined)
+-- These questions require both numeric data AND narrative explanation.
+--
+--  🔥 Combined Analysis
+--    "Is Apple growing or declining? Use numbers and explanation."
+--    "Compare Apple's revenue growth and summarize key reasons behind it."
+--    "How do Apple's financial metrics align with analyst expectations?"
+--    "What is Apple's financial health and what trends influence it?"
+--    "Analyze Apple's profitability trend and explain the business factors."
+--
+--  📌 Strategic Questions
+--    "Should investors consider buying Apple stock? Provide metrics and analyst reasoning."
+--    "How is the semiconductor market trend affecting Apple's performance?"
+--    "What are Apple's growth opportunities based on financial data and market trends?"
+--    "Compare Apple vs Microsoft on revenue and profitability."
+--
+-- ============================================================================
+--
+-- 4️⃣  NATURAL LANGUAGE → SQL (Auto-Generated Queries)
+-- The AI system can also translate natural language to SQL automatically:
+--
+--    "Show all Apple's quarterly revenue sorted by period."
+--    "Which Apple product has the highest revenue contribution?"
+--    "List all market trends with impact score above 8 and sort by date."
+--    "Find companies in the Technology sector with highest revenue in 2024-Q1."
+--    "Show analyst price targets for Apple from different firms."
+--
+-- ============================================================================
+--
+-- 5️⃣  GENERAL FINANCIAL KNOWLEDGE QUESTIONS
+-- These are answered by the configured LLM (Ollama or OpenAI):
+--
+--    "What drives Apple's profitability?"
+--    "How does Apple compare with other tech companies?"
+--    "What are the major factors influencing the EV market?" (Tesla-related)
+--    "Explain EPS in simple terms."
+--    "What is market capitalization?"
+--    "How do quarterly earnings reports impact stock prices?"
+--
+-- ============================================================================
+
+-- ============================================================================
 -- TABLE: companies
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS companies (
