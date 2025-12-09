@@ -18,6 +18,7 @@ Important Files / Entry Points
 - `app/core/vectorstore.py` — Chroma-backed vector store helpers and `get_doc_retriever()` used by RAG flows.
 - `app/core/sql_tools.py` — SQL agent creation; expects `DATABASE_URL` for `SQLDatabase.from_uri()`.
 - `app/core/rag.py` — alternative RAG pipeline using HuggingFace/FAISS or Pinecone + Ollama; used for local indexing/testing.
+- `app/core/plot_generator.py` — **[NEW]** Financial metrics visualization pipeline: extracts company ticker and metric from text, queries PostgreSQL, generates matplotlib plots, returns base64-encoded JSON response.
 - `app/ingestion/ingestion_docs.py` — ingestion script: loads PDFs and text, splits into chunks, persists to vectorstore.
 - `app/config.py` — single source of runtime config (`settings`) using `pydantic.BaseSettings` and `.env`.
 
@@ -25,7 +26,7 @@ Configuration & Environment
 - Uses `app.config.settings`. Check or set in a `.env` file in repo root.
 - Relevant env vars discovered in code:
   - `OPENAI_API_KEY` — OpenAI embeddings (used by `OpenAIEmbeddings`).
-  - `DATABASE_URL` — SQL DB URI for SQL agent (postgres example: `postgresql://user:pass@host:port/db`).
+  - `DATABASE_URL` — SQL DB URI for SQL agent and plot generator (postgres example: `postgresql://user:pass@host:port/db`).
   - `VECTOR_DB_DIR` — local Chroma persistence dir (default `./data/vectorstore`).
   - `BGE_MODEL`, `PINECONE_API_KEY`, `PINECONE_INDEX` — optional Pinecone/embedding model for `app/core/rag.py`.
   - `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `LLM_TEMPERATURE` — used by `app/core/rag.py` if using Ollama locally.
@@ -52,10 +53,16 @@ Common Tasks & Examples
   uvicorn app.core.server:app --reload --port 8000
   curl -X POST "http://localhost:8000/chat" -H "Content-Type: application/json" -d '{"user_id":"u1","question":"What are Apple's main products?"}'
   ```
+- Generate financial plot from RAG output:
+  ```bash
+  curl -X POST "http://localhost:8000/api/plot" -H "Content-Type: application/json" -d '{"user_id":"u1","question":"Show me Apple revenue growth trend"}'
+  ```
+  Returns: `{"company":"AAPL","metric":"revenue","data_points":N,"is_trend":true,"plot_base64":"<base64-encoded PNG>"}`
 - If using SQL features: ensure `DATABASE_URL` points to a populated DB and run queries via the `/chat` endpoint; the SQL agent will generate and run SQL through LangChain's SQL toolkit.
+- If using plot generation: ensure `DATABASE_URL` points to a PostgreSQL instance with the financial metrics schema (see `db/schema.sql` for table definitions).
 
 Dependencies
-- See `requirements.txt` for the main packages: `fastapi`, `uvicorn`, `langchain`, `langchain-openai`, `langchain-community`, `chromadb`, `sqlalchemy`, `psycopg2-binary`, `python-dotenv`, `pymupdf`, `unstructured`.
+- See `requirements.txt` for the main packages: `fastapi`, `uvicorn`, `langchain`, `langchain-openai`, `langchain-community`, `chromadb`, `sqlalchemy`, `psycopg2-binary`, `python-dotenv`, `pymupdf`, `unstructured`, `matplotlib`.
 
 If you need clarification
 - Tell me which area to expand (LLM wiring, DB setup, or fixing package init). I can: add example `app/core/llm.py`, change `_init_.py` to `__init__.py`, or produce a `README.md` with run scripts.
