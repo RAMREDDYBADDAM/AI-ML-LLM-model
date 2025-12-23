@@ -218,11 +218,81 @@ def _llm_synthesize_series_sync(company: str, metric: str, points: int = 5) -> O
 
 
 # ============================================================================
-# S&P 500 Data Functions (CSV-based, no DB required)
+# S&P 500 Data Functions - LIVE Yahoo Finance Data
 # ============================================================================
 
+def _get_live_sp500_data() -> Optional[List[Tuple[str, float]]]:
+    """Fetch LIVE S&P 500 data from Yahoo Finance for real-time plotting."""
+    try:
+        import yfinance as yf
+        from datetime import datetime, timedelta
+        
+        # Fetch S&P 500 index (^GSPC) - last 30 days of data
+        spy = yf.Ticker("^GSPC")
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        
+        hist = spy.history(start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+        
+        if hist.empty:
+            print("[Plot] Yahoo Finance returned empty data for ^GSPC")
+            return None
+        
+        series = []
+        for date, row in hist.iterrows():
+            date_str = date.strftime('%m/%d')
+            close_price = float(row['Close'])
+            series.append((date_str, close_price))
+        
+        print(f"[Plot] Fetched {len(series)} live data points from Yahoo Finance")
+        return series
+        
+    except Exception as e:
+        print(f"[Plot] Error fetching live S&P 500 data: {e}")
+        return None
+
+
+def _get_live_stock_data(ticker: str) -> Optional[List[Tuple[str, float]]]:
+    """Fetch live stock data for a specific ticker from Yahoo Finance."""
+    try:
+        import yfinance as yf
+        from datetime import datetime, timedelta
+        
+        stock = yf.Ticker(ticker)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        
+        hist = stock.history(start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+        
+        if hist.empty:
+            print(f"[Plot] Yahoo Finance returned empty data for {ticker}")
+            return None
+        
+        series = []
+        for date, row in hist.iterrows():
+            date_str = date.strftime('%m/%d')
+            close_price = float(row['Close'])
+            series.append((date_str, close_price))
+        
+        print(f"[Plot] Fetched {len(series)} live data points for {ticker}")
+        return series
+        
+    except Exception as e:
+        print(f"[Plot] Error fetching live data for {ticker}: {e}")
+        return None
+
+
 def _get_sp500_plot_data() -> Optional[List[Tuple[str, float]]]:
-    """Get S&P 500 historical data as time-series for plotting."""
+    """Get S&P 500 historical data as time-series for plotting.
+    
+    Priority: 1) Live Yahoo Finance, 2) CSV analytics, 3) Sample fallback
+    """
+    # First, try live Yahoo Finance data
+    live_data = _get_live_sp500_data()
+    if live_data:
+        return live_data
+    
+    # Fallback to CSV-based analytics
     if not SP500_ANALYTICS_AVAILABLE:
         return None
     
@@ -282,19 +352,41 @@ def plot_metric(series: List[Tuple[str, float]], company: str, metric: str) -> s
     Returns:
         Base64-encoded PNG string
     """
+    from datetime import datetime
+    
     if not series:
         raise ValueError("Empty series data")
 
     periods, values = zip(*series)
 
-    # Create figure and plot
+    # Create figure and plot with modern styling
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(periods, values, marker="o", linewidth=2, markersize=8, color="#2563eb")
-    ax.grid(True, alpha=0.3)
-    ax.set_xlabel("Period", fontsize=12)
+    
+    # Plot line with gradient effect
+    ax.fill_between(range(len(periods)), values, alpha=0.3, color="#3b82f6")
+    ax.plot(range(len(periods)), values, marker="o", linewidth=2, markersize=4, color="#2563eb")
+    
+    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.set_xlabel("Date", fontsize=12)
     ax.set_ylabel(metric.replace("_", " ").capitalize(), fontsize=12)
-    ax.set_title(f"{company} - {metric.replace('_', ' ').capitalize()} Trend", fontsize=14)
-    ax.tick_params(axis="x", rotation=45)
+    
+    # Add timestamp to title
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    ax.set_title(f"{company} - {metric.replace('_', ' ').capitalize()}\n🔴 LIVE Data as of {now}", fontsize=13)
+    
+    # Show fewer x-axis labels to avoid crowding
+    step = max(1, len(periods) // 8)
+    ax.set_xticks(range(0, len(periods), step))
+    ax.set_xticklabels([periods[i] for i in range(0, len(periods), step)], rotation=45, ha='right')
+    
+    # Add latest value annotation
+    latest_value = values[-1]
+    ax.annotate(f'${latest_value:,.2f}', 
+                xy=(len(periods)-1, latest_value),
+                xytext=(10, 10), textcoords='offset points',
+                fontsize=11, fontweight='bold', color='#059669',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#ecfdf5', edgecolor='#059669'))
+    
     plt.tight_layout()
 
     # Convert to base64
@@ -315,9 +407,9 @@ def plot_metric(series: List[Tuple[str, float]], company: str, metric: str) -> s
 
 def generate_plot_from_rag_output(rag_text: str) -> Optional[Dict[str, Any]]:
     """
-    Complete pipeline: extract params → fetch data → plot → return JSON.
+    Complete pipeline: extract params → fetch LIVE data → plot → return JSON.
     
-    Uses S&P 500 historical data (CSV-based) - no external database required.
+    Uses LIVE Yahoo Finance data for real-time market visualization.
 
     Args:
         rag_text: Natural-language output from RAG model
@@ -326,6 +418,8 @@ def generate_plot_from_rag_output(rag_text: str) -> Optional[Dict[str, Any]]:
         JSON dict with company, metric, and plot_base64
         or None if any step fails
     """
+    from datetime import datetime
+    
     # Step 1: Extract parameters from RAG text
     params = extract_plot_params(rag_text)
     if not params:
@@ -339,29 +433,45 @@ def generate_plot_from_rag_output(rag_text: str) -> Optional[Dict[str, Any]]:
     metric = params["metric"]
     is_trend = params.get("is_trend", True)
 
-    # Step 2: Try to fetch S&P 500 data
-    series = _get_sp500_plot_data()
+    # Step 2: Fetch LIVE data from Yahoo Finance
+    if company.upper() == "SP500" or company.upper() == "^GSPC":
+        series = _get_live_sp500_data()
+        display_name = "S&P 500 Index"
+    else:
+        # Try to get specific stock data
+        series = _get_live_stock_data(company.upper())
+        display_name = COMPANY_MAP.get(company.upper(), company.upper())
+    
+    # Fallback to S&P 500 if specific ticker fails
     if not series:
-        # Try sample fallback if S&P 500 data unavailable
+        series = _get_sp500_plot_data()
+        display_name = "S&P 500 Index"
+    
+    if not series:
+        # Last resort: sample fallback
         series = SAMPLE_SERIES.get(("SP500", "close"))
+        display_name = "S&P 500 (Sample)"
         if not series:
             print(f"Could not fetch plot data for {company}")
             return None
 
-    # Step 3: Generate plot
+    # Step 3: Generate plot with timestamp
     try:
-        plot_base64 = plot_metric(series, f"S&P 500 ({company})", metric)
+        plot_base64 = plot_metric(series, display_name, metric)
     except Exception as e:
         print(f"Error generating plot: {e}")
         return None
 
-    # Step 4: Return JSON response
+    # Step 4: Return JSON response with timestamp
     return {
         "company": company,
+        "display_name": display_name,
         "metric": metric,
         "data_points": len(series),
         "is_trend": is_trend,
         "plot_base64": plot_base64,
+        "timestamp": datetime.now().isoformat(),
+        "source": "yahoo_finance_live",
     }
 
 

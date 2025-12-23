@@ -146,17 +146,38 @@ async def call_llm(messages_or_prompt: Any) -> Any:
     llm = get_llm()
 
     def _invoke(arg):
+        # Convert messages list to string prompt if needed
+        if isinstance(arg, list):
+            # Format messages into a prompt string
+            prompt_parts = []
+            for msg in arg:
+                if isinstance(msg, dict):
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')
+                    prompt_parts.append(f"{role}: {content}")
+                else:
+                    prompt_parts.append(str(msg))
+            arg = "\n\n".join(prompt_parts)
+        
         # Try a few common interfaces
         try:
             if hasattr(llm, "invoke"):
-                # many local/community LLMs expose .invoke(prompt)
-                return llm.invoke(arg)
+                result = llm.invoke(arg)
+                # Handle different result types
+                if isinstance(result, dict):
+                    return result.get('content', str(result))
+                if hasattr(result, 'content'):
+                    return result.content
+                return str(result)
             if hasattr(llm, "__call__"):
-                return llm(arg)
+                result = llm(arg)
+                if isinstance(result, dict):
+                    return result.get('content', str(result))
+                return str(result)
             # Last resort
-            return llm
-        except Exception:
-            raise
+            return str(llm)
+        except Exception as e:
+            return f"LLM Error: {str(e)}"
 
     # Run blocking call in worker thread
     return await anyio.to_thread.run_sync(_invoke, messages_or_prompt)

@@ -33,3 +33,6 @@ matplotlib
 # Data processing
 pandas
 openpyxl
+
+# Yahoo Finance API (live stock data)
+yfinance

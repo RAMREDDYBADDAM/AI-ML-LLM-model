@@ -22,6 +22,13 @@ _cache_timestamps = {}
 CACHE_DURATION = 300  # 5 minutes
 
 
+def clear_insights_cache():
+    """Clear all cached insights data."""
+    global _insight_cache, _cache_timestamps
+    _insight_cache = {}
+    _cache_timestamps = {}
+
+
 def _meta_stub(aggregation: str, start: Optional[Any] = None, end: Optional[Any] = None) -> Dict[str, Any]:
     return {
         "company": "SP500 Index",
@@ -136,7 +143,7 @@ def get_revenue_leaders(limit: int = 10) -> Dict[str, Any]:
 
 
 def get_profitability_metrics(limit: int = 10) -> Dict[str, Any]:
-    """Get companies with best performance metrics."""
+    """Get latest S&P 500 performance metrics (most recent years first)."""
     cache_key = f"profitability_{limit}"
     cached = _get_cached(cache_key)
     if cached:
@@ -148,8 +155,12 @@ def get_profitability_metrics(limit: int = 10) -> Dict[str, Any]:
         growth_data = get_sp500_growth_analysis()
         analysis_rows = growth_data.get("data", []) if isinstance(growth_data, dict) else []
 
+        # IMPORTANT: Reverse to get most recent years first
+        # The growth analysis returns data in ascending order (oldest first)
+        reversed_rows = list(reversed(analysis_rows))
+
         rows = []
-        for idx, item in enumerate(analysis_rows[: min(limit, 15)]):
+        for idx, item in enumerate(reversed_rows[:limit]):
             return_pct = safe_number(item.get("return_pct"))
             rows.append(
                 {

@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import traceback
 from functools import lru_cache
 from datetime import datetime, timedelta
@@ -96,9 +96,11 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    answer: str
+    """Response model that accepts dict or string for answer field."""
+    answer: Any  # Can be string (DOC) or dict (LIVE_DATA)
     query_type: str
     router: Dict[str, Any]
+    source: Optional[str] = None
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -114,6 +116,7 @@ async def chat_endpoint(req: ChatRequest):
             answer=result.get("answer", ""),
             query_type=result.get("query_type", "UNKNOWN"),
             router=result.get("router", {}),
+            source=result.get("source"),
         )
     except Exception as e:
         error_msg = f"Server error: {str(e)}"
@@ -429,6 +432,244 @@ async def insights_comparison():
         return _analytics_error_response("insights", f"Failed to fetch comparison: {e}")
 
 
+# ==================== Live Market Data Endpoint ====================
+
+@app.get("/api/market/live")
+async def get_live_market_data(range: str = "1d"):
+    """
+    Get live S&P 500 market data from Yahoo Finance.
+    
+    Args:
+        range: Time range - '1d', '5d', '1mo', '3mo', '1y'
+    
+    Returns:
+        Live quote data and historical prices for charting
+    """
+    def fetch_market_data():
+        try:
+            import yfinance as yf
+            from datetime import datetime
+            
+            # Fetch S&P 500 index
+            sp500 = yf.Ticker("^GSPC")
+            
+            # Get quote info
+            info = sp500.info
+            quote = {
+                "symbol": "^GSPC",
+                "name": "S&P 500",
+                "regularMarketPrice": info.get("regularMarketPrice") or info.get("previousClose"),
+                "regularMarketChange": info.get("regularMarketChange", 0),
+                "regularMarketChangePercent": info.get("regularMarketChangePercent", 0),
+                "regularMarketOpen": info.get("regularMarketOpen") or info.get("open"),
+                "regularMarketDayHigh": info.get("regularMarketDayHigh") or info.get("dayHigh"),
+                "regularMarketDayLow": info.get("regularMarketDayLow") or info.get("dayLow"),
+                "regularMarketPreviousClose": info.get("regularMarketPreviousClose") or info.get("previousClose"),
+                "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh"),
+                "fiftyTwoWeekLow": info.get("fiftyTwoWeekLow"),
+            }
+            
+            # Map range to yfinance parameters
+            range_map = {
+                "1d": {"period": "1d", "interval": "5m"},
+                "5d": {"period": "5d", "interval": "15m"},
+                "1mo": {"period": "1mo", "interval": "1h"},
+                "3mo": {"period": "3mo", "interval": "1d"},
+                "1y": {"period": "1y", "interval": "1d"},
+            }
+            params = range_map.get(range, range_map["1d"])
+            
+            # Get historical data for chart
+            hist = sp500.history(period=params["period"], interval=params["interval"])
+            
+            history = []
+            for idx, row in hist.iterrows():
+                if params["interval"] in ["5m", "15m", "1h"]:
+                    time_str = idx.strftime('%H:%M')
+                else:
+                    time_str = idx.strftime('%m/%d')
+                
+                history.append({
+                    "time": time_str,
+                    "date": idx.strftime('%Y-%m-%d %H:%M'),
+                    "close": round(row["Close"], 2),
+                    "open": round(row["Open"], 2),
+                    "high": round(row["High"], 2),
+                    "low": round(row["Low"], 2),
+                    "volume": int(row["Volume"]) if row["Volume"] else 0,
+                })
+            
+            return {
+                "success": True,
+                "quote": quote,
+                "history": history,
+                "range": range,
+                "timestamp": datetime.now().isoformat(),
+                "source": "yahoo_finance",
+            }
+            
+        except Exception as e:
+            print(f"[Market API] Error fetching live data: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "quote": {},
+                "history": [],
+            }
+    
+    try:
+        data = await anyio.to_thread.run_sync(fetch_market_data)
+        response = JSONResponse(content=data)
+        return _add_cache_headers(response, max_age=60)  # Cache for 1 minute
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+
+@app.get("/api/market/indices")
+async def get_market_indices():
+    """
+    Get live data for major US indices: S&P 500, DOW, NASDAQ.
+    Optimized for fast response - US markets only.
+    """
+    def fetch_indices():
+        try:
+            import yfinance as yf
+            from datetime import datetime
+            
+            # US indices only for faster response
+            indices = {
+                "^GSPC": "S&P 500",
+                "^DJI": "Dow Jones",
+                "^IXIC": "NASDAQ"
+            }
+            
+            result = {}
+            for symbol, name in indices.items():
+                try:
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                    
+                    price = info.get("regularMarketPrice") or info.get("previousClose") or 0
+                    prev_close = info.get("regularMarketPreviousClose") or info.get("previousClose") or price
+                    change = info.get("regularMarketChange") or (price - prev_close)
+                    change_pct = info.get("regularMarketChangePercent") or ((change / prev_close * 100) if prev_close else 0)
+                    
+                    result[symbol] = {
+                        "name": name,
+                        "symbol": symbol,
+                        "price": round(price, 2) if price else None,
+                        "change": round(change, 2) if change else 0,
+                        "change_pct": round(change_pct, 2) if change_pct else 0,
+                        "open": info.get("regularMarketOpen") or info.get("open"),
+                        "high": info.get("regularMarketDayHigh") or info.get("dayHigh"),
+                        "low": info.get("regularMarketDayLow") or info.get("dayLow"),
+                        "prev_close": round(prev_close, 2) if prev_close else None,
+                    }
+                except Exception as e:
+                    print(f"Error fetching {symbol}: {e}")
+                    result[symbol] = {"name": name, "symbol": symbol, "error": str(e)}
+            
+            return {
+                "success": True,
+                "indices": result,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    try:
+        data = await anyio.to_thread.run_sync(fetch_indices)
+        response = JSONResponse(content=data)
+        return _add_cache_headers(response, max_age=60)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
+
+@app.get("/api/market/india")
+async def get_indian_market_data():
+    """
+    Get detailed Indian market data: SENSEX, NIFTY 50 with comparison to S&P 500.
+    """
+    def fetch_india_market():
+        try:
+            import yfinance as yf
+            from datetime import datetime
+            import pytz
+            
+            # Check if Indian market is open (9:15 AM - 3:30 PM IST, Mon-Fri)
+            ist = pytz.timezone('Asia/Kolkata')
+            now_ist = datetime.now(ist)
+            market_open = False
+            if now_ist.weekday() < 5:  # Monday = 0, Friday = 4
+                market_start = now_ist.replace(hour=9, minute=15, second=0)
+                market_end = now_ist.replace(hour=15, minute=30, second=0)
+                market_open = market_start <= now_ist <= market_end
+            
+            # Fetch SENSEX
+            sensex = yf.Ticker("^BSESN")
+            sensex_info = sensex.info
+            sensex_price = sensex_info.get("regularMarketPrice") or sensex_info.get("previousClose") or 0
+            sensex_prev = sensex_info.get("regularMarketPreviousClose") or sensex_info.get("previousClose") or sensex_price
+            sensex_change = sensex_info.get("regularMarketChange") or (sensex_price - sensex_prev)
+            sensex_pct = sensex_info.get("regularMarketChangePercent") or ((sensex_change / sensex_prev * 100) if sensex_prev else 0)
+            
+            # Fetch NIFTY
+            nifty = yf.Ticker("^NSEI")
+            nifty_info = nifty.info
+            nifty_price = nifty_info.get("regularMarketPrice") or nifty_info.get("previousClose") or 0
+            nifty_prev = nifty_info.get("regularMarketPreviousClose") or nifty_info.get("previousClose") or nifty_price
+            nifty_change = nifty_info.get("regularMarketChange") or (nifty_price - nifty_prev)
+            nifty_pct = nifty_info.get("regularMarketChangePercent") or ((nifty_change / nifty_prev * 100) if nifty_prev else 0)
+            
+            # Fetch S&P 500 for comparison
+            sp500 = yf.Ticker("^GSPC")
+            sp500_info = sp500.info
+            sp500_price = sp500_info.get("regularMarketPrice") or sp500_info.get("previousClose") or 0
+            sp500_prev = sp500_info.get("regularMarketPreviousClose") or sp500_info.get("previousClose") or sp500_price
+            sp500_pct = ((sp500_price - sp500_prev) / sp500_prev * 100) if sp500_prev else 0
+            
+            return {
+                "success": True,
+                "market_open": market_open,
+                "market_time": now_ist.strftime("%H:%M IST"),
+                "sensex": {
+                    "price": round(sensex_price, 2),
+                    "change": round(sensex_change, 2),
+                    "change_pct": round(sensex_pct, 2),
+                    "open": sensex_info.get("regularMarketOpen") or sensex_info.get("open"),
+                    "high": sensex_info.get("regularMarketDayHigh") or sensex_info.get("dayHigh"),
+                    "low": sensex_info.get("regularMarketDayLow") or sensex_info.get("dayLow"),
+                    "prev_close": round(sensex_prev, 2),
+                    "52w_high": sensex_info.get("fiftyTwoWeekHigh"),
+                    "52w_low": sensex_info.get("fiftyTwoWeekLow"),
+                },
+                "nifty": {
+                    "price": round(nifty_price, 2),
+                    "change": round(nifty_change, 2),
+                    "change_pct": round(nifty_pct, 2),
+                    "open": nifty_info.get("regularMarketOpen") or nifty_info.get("open"),
+                    "high": nifty_info.get("regularMarketDayHigh") or nifty_info.get("dayHigh"),
+                    "low": nifty_info.get("regularMarketDayLow") or nifty_info.get("dayLow"),
+                    "prev_close": round(nifty_prev, 2),
+                    "52w_high": nifty_info.get("fiftyTwoWeekHigh"),
+                    "52w_low": nifty_info.get("fiftyTwoWeekLow"),
+                },
+                "sp500_change_pct": round(sp500_pct, 2),
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            print(f"Error fetching Indian market data: {e}")
+            return {"success": False, "error": str(e)}
+    
+    try:
+        data = await anyio.to_thread.run_sync(fetch_india_market)
+        response = JSONResponse(content=data)
+        return _add_cache_headers(response, max_age=60)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 # ==================== S&P 500 Analytics Endpoints ====================
 
 @app.get("/api/sp500/summary")
@@ -505,6 +746,52 @@ async def sp500_volatility(period: int = 365):
         return JSONResponse(content=volatility)
     except Exception as e:
         return _analytics_error_response("volatility", f"Failed to fetch volatility: {e}")
+
+
+@app.get("/api/sp500/insights")
+async def sp500_insights():
+    """
+    Get comprehensive market insights including:
+    - Rolling returns (1Y, 5Y, 10Y CAGR)
+    - Volatility metrics (30D, 1Y)
+    - Maximum drawdown
+    - Market regime (Bull/Bear/Sideways)
+    - Valuation status (P/E percentiles)
+    - Trend strength score (0-100)
+    - Risk warnings and opportunities
+    """
+    try:
+        from app.core.sp500_analytics import get_market_insights
+        insights = await anyio.to_thread.run_sync(get_market_insights)
+        return JSONResponse(content=insights)
+    except Exception as e:
+        return _analytics_error_response("insights", f"Failed to generate insights: {e}")
+
+
+@app.get("/api/sp500/decades-enhanced")
+async def sp500_decades_enhanced():
+    """
+    Get enhanced decade performance with CAGR, max drawdown, and volatility.
+    """
+    try:
+        from app.core.sp500_analytics import get_enhanced_decade_performance
+        decades = await anyio.to_thread.run_sync(get_enhanced_decade_performance)
+        return JSONResponse(content=decades)
+    except Exception as e:
+        return _analytics_error_response("decade", f"Failed to fetch enhanced decade data: {e}")
+
+
+@app.get("/api/sp500/correlations-full")
+async def sp500_correlations_full():
+    """
+    Get full correlation matrix between all S&P 500 metrics.
+    """
+    try:
+        from app.core.sp500_analytics import get_full_correlation_matrix
+        correlations = await anyio.to_thread.run_sync(get_full_correlation_matrix)
+        return JSONResponse(content=correlations)
+    except Exception as e:
+        return _analytics_error_response("correlation", f"Failed to fetch full correlations: {e}")
 
 
 # ==================== S&P 500 LLM Chain Endpoints ====================

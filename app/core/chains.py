@@ -154,11 +154,62 @@ Provide a structured, professional financial analysis response following the man
 
 
 # ------------------------------------------------------
+# Database Availability Check
+# ------------------------------------------------------
+def _check_db_available() -> bool:
+    """
+    Check if database is reachable by attempting SELECT 1.
+    Returns True if DB is available, False otherwise.
+    """
+    if not settings.database_url:
+        return False
+    
+    try:
+        from sqlalchemy import create_engine, text
+        engine = create_engine(settings.database_url)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        print(f"[DB CHECK] Database unavailable: {e}")
+        return False
+
+
+def _check_yahoo_available() -> bool:
+    """
+    Check if Yahoo Finance service is available and enabled.
+    Returns True if Yahoo is available, False otherwise.
+    """
+    try:
+        from app.core.yahoo_service import is_yahoo_available
+        return is_yahoo_available()
+    except ImportError:
+        print("[YAHOO CHECK] yfinance not installed")
+        return False
+    except Exception as e:
+        print(f"[YAHOO CHECK] Yahoo Finance unavailable: {e}")
+        return False
+
+
+# ------------------------------------------------------
 # SQL Analytics Chain
 # ------------------------------------------------------
 def run_sql_analytics(question: str) -> Dict[str, Any]:
-    """SQL chain using agent; fallback to S&P 500 demo data."""
-    if settings.database_url:
+    """
+    SQL chain with proper fallback hierarchy:
+    1. Database (if configured and reachable)
+    2. Yahoo Finance (if enabled and available)
+    3. Sample data fallback (only if both above fail)
+    """
+    
+    # Step 1: Check DB availability
+    db_available = _check_db_available()
+    yahoo_available = _check_yahoo_available()
+    
+    print(f"[SQL ANALYTICS] DB available: {db_available}, Yahoo available: {yahoo_available}")
+    
+    # Try database first if available
+    if db_available:
         try:
             from app.core.sql_tools import get_sql_agent
             agent = get_sql_agent()
@@ -171,34 +222,215 @@ def run_sql_analytics(question: str) -> Dict[str, Any]:
 
             answer_text = answer_text.strip() or "The SQL agent did not return any rows."
 
-            return {"answer": answer_text, "query_type": "SQL"}
+            return {
+                "answer": f"## 📊 Database Query Result\n\n{answer_text}\n\n*Source: Live PostgreSQL database*",
+                "query_type": "SQL",
+                "source": "database"
+            }
 
-        except Exception:
-            pass  # fallback to demo
+        except Exception as e:
+            print(f"[SQL ANALYTICS] DB query failed: {e}")
+            # Fall through to Yahoo Finance
 
-    # Demo SQL responses using S&P 500 companies
+    # Step 2: Try Yahoo Finance for live data
+    if yahoo_available:
+        try:
+            return _get_yahoo_finance_response(question)
+        except Exception as e:
+            print(f"[SQL ANALYTICS] Yahoo Finance error: {e}")
+            # Fall through to sample data
+
+    # Step 3: Final fallback to sample data (only when BOTH fail)
+    return _get_sample_data_response(question)
+
+
+def _format_currency(value):
+    """Format large numbers as currency strings."""
+    if value is None or value == 'N/A':
+        return 'N/A'
+    try:
+        num = float(value)
+        if num >= 1e12:
+            return f"${num/1e12:.2f}T"
+        if num >= 1e9:
+            return f"${num/1e9:.2f}B"
+        if num >= 1e6:
+            return f"${num/1e6:.2f}M"
+        return f"${num:,.2f}"
+    except:
+        return str(value)
+
+
+def _get_yahoo_finance_response(question: str) -> Dict[str, Any]:
+    """Get live data from Yahoo Finance - returns actual data, not boilerplate."""
+    from app.core.yahoo_service import yahoo_service, get_company_info
+    from datetime import datetime
+    
+    question_lower = question.lower()
+    as_of = datetime.now().isoformat()
+    
+    # TOP N COMPANIES QUERY - Return actual ranked list
+    if any(word in question_lower for word in ['top', 'largest', 'biggest', 'best', 'leading']):
+        # Extract N from query (default 10)
+        import re
+        n_match = re.search(r'top\s*(\d+)', question_lower)
+        n = int(n_match.group(1)) if n_match else 10
+        
+        companies = yahoo_service.get_top_companies_data()
+        if companies:
+            # Sort by market cap descending
+            sorted_companies = sorted(
+                [c for c in companies if c.get('market_cap')],
+                key=lambda x: x.get('market_cap', 0),
+                reverse=True
+            )[:n]
+            
+            # Build concise ranked list
+            ranked_list = []
+            for i, c in enumerate(sorted_companies, 1):
+                price = c.get('current_price')
+                cap = c.get('market_cap', 0)
+                ranked_list.append({
+                    "rank": i,
+                    "ticker": c.get('ticker'),
+                    "name": c.get('name', '')[:30],
+                    "price": f"${price:.2f}" if price else "N/A",
+                    "market_cap": _format_currency(cap),
+                    "sector": c.get('sector', 'N/A')[:20]
+                })
+            
+            return {
+                "answer": {
+                    "top_companies": ranked_list,
+                    "metric": "market_cap",
+                    "count": len(ranked_list),
+                    "as_of": as_of,
+                    "sources": ["yahoo_finance_api"]
+                },
+                "query_type": "SQL",
+                "source": "yahoo_finance"
+            }
+    
+    # SPECIFIC COMPANY QUERY
+    company_keywords = {
+        'apple': 'AAPL', 'aapl': 'AAPL',
+        'microsoft': 'MSFT', 'msft': 'MSFT',
+        'google': 'GOOGL', 'googl': 'GOOGL', 'alphabet': 'GOOGL',
+        'amazon': 'AMZN', 'amzn': 'AMZN',
+        'tesla': 'TSLA', 'tsla': 'TSLA',
+        'nvidia': 'NVDA', 'nvda': 'NVDA',
+        'meta': 'META', 'facebook': 'META',
+        'berkshire': 'BRK-B',
+        'johnson': 'JNJ', 'jnj': 'JNJ',
+        'walmart': 'WMT', 'wmt': 'WMT',
+        'jpmorgan': 'JPM', 'jpm': 'JPM',
+    }
+    
+    for keyword, ticker in company_keywords.items():
+        if keyword in question_lower:
+            info = get_company_info(ticker)
+            if info and info.get('name'):
+                return {
+                    "answer": {
+                        "ticker": ticker,
+                        "name": info.get('name'),
+                        "price": info.get('current_price'),
+                        "market_cap": _format_currency(info.get('market_cap')),
+                        "pe_ratio": round(info.get('pe_ratio', 0), 2) if info.get('pe_ratio') else None,
+                        "eps": info.get('eps'),
+                        "dividend_yield": f"{info.get('dividend_yield', 0)*100:.2f}%" if info.get('dividend_yield') else None,
+                        "52w_high": info.get('52_week_high'),
+                        "52w_low": info.get('52_week_low'),
+                        "sector": info.get('sector'),
+                        "industry": info.get('industry'),
+                        "as_of": as_of,
+                        "sources": ["yahoo_finance_api"]
+                    },
+                    "query_type": "SQL",
+                    "source": "yahoo_finance"
+                }
+    
+    # MARKET OVERVIEW (default)
+    companies = yahoo_service.get_top_companies_data()
+    if companies:
+        top_5 = sorted(
+            [c for c in companies if c.get('market_cap')],
+            key=lambda x: x.get('market_cap', 0),
+            reverse=True
+        )[:5]
+        
+        overview = [
+            {
+                "ticker": c.get('ticker'),
+                "price": f"${c.get('current_price', 0):.2f}" if c.get('current_price') else "N/A",
+                "market_cap": _format_currency(c.get('market_cap'))
+            }
+            for c in top_5
+        ]
+        
+        return {
+            "answer": {
+                "market_snapshot": overview,
+                "count": len(companies),
+                "as_of": as_of,
+                "sources": ["yahoo_finance_api"]
+            },
+            "query_type": "SQL",
+            "source": "yahoo_finance"
+        }
+    
+    return _get_sample_data_response(question)
+
+
+def _get_sample_data_response(question: str) -> Dict[str, Any]:
+    """
+    Fallback to sample data when BOTH database AND Yahoo Finance are unavailable.
+    Returns structured JSON schema response.
+    """
     from app.core.sp500_companies import (
         get_sp500_companies,
         get_top_companies_by_revenue,
         search_companies
     )
+    from datetime import datetime
     
     question_lower = question.lower()
+    as_of = datetime.now().isoformat()
     
-    # Get relevant companies based on question
-    notice = "Live database unavailable; returning sanitized sample data."
+    # Base fallback response structure
+    def build_fallback_response(summary_items, source_note="sample_data"):
+        return {
+            "answer": {
+                "summary": summary_items,
+                "pros": [
+                    "Sample data available for reference",
+                    "S&P 500 company listings accessible"
+                ],
+                "cons": [
+                    "Live data unavailable - prices not current",
+                    "Database connection not configured",
+                    "Yahoo Finance API not enabled or unreachable"
+                ],
+                "suggestions": [
+                    "1. Set USE_YAHOO_DATA=true in .env for live prices",
+                    "2. Install yfinance: pip install yfinance",
+                    "3. Or configure DATABASE_URL for PostgreSQL"
+                ],
+                "as_of": as_of,
+                "sources": [source_note]
+            },
+            "query_type": "SQL",
+            "source": "sample_data"
+        }
 
     if any(word in question_lower for word in ['top', 'largest', 'biggest', 'revenue', 'leader']):
         companies = get_top_companies_by_revenue(5)
         if companies:
-            company_list = "\n".join([
-                f"- {c['name']} ({c['ticker']}): Revenue ${c.get('revenue', 'N/A')}"
-                for c in companies
-            ])
-            return {
-                "answer": f"{notice}\n\n📊 Top S&P 500 Companies by Revenue:\n{company_list}",
-                "query_type": "SQL"
-            }
+            summary_items = [
+                f"Live data unavailable; showing last snapshot from sample cache",
+                *[f"{c['name']} ({c['ticker']}) - {c.get('sector', 'N/A')}" for c in companies[:3]]
+            ]
+            return build_fallback_response(summary_items)
     
     # Search for specific company
     search_keywords = ['apple', 'microsoft', 'google', 'amazon', 'tesla', 'nvidia', 'meta', 'berkshire']
@@ -207,24 +439,28 @@ def run_sql_analytics(question: str) -> Dict[str, Any]:
             company = search_companies(keyword, 1)
             if company:
                 c = company[0]
-                return {
-                    "answer": f"{notice}\n\n📊 {c['name']} ({c['ticker']}) - Sector: {c.get('sector', 'N/A')}",
-                    "query_type": "SQL"
-                }
+                summary_items = [
+                    f"Live data unavailable; showing cached info for {c['name']}",
+                    f"Ticker: {c['ticker']} | Sector: {c.get('sector', 'N/A')}",
+                    "Real-time pricing not available"
+                ]
+                return build_fallback_response(summary_items)
     
-    # Default: show some companies
+    # Default response
     companies = get_sp500_companies(10)
     if companies:
-        company_list = ", ".join([c['ticker'] for c in companies[:10]])
-        return {
-            "answer": f"{notice}\n\n📊 S&P 500 Companies: {company_list}...\nTry asking about specific companies or metrics.",
-            "query_type": "SQL"
-        }
+        tickers = ", ".join([c['ticker'] for c in companies[:5]])
+        summary_items = [
+            "Live data unavailable; showing sample S&P 500 data",
+            f"Available tickers: {tickers}",
+            "Ask about specific companies for cached details"
+        ]
+        return build_fallback_response(summary_items)
     
-    return {
-        "answer": f"{notice}\n\n📊 [Demo] S&P 500 financial data available. Try asking about top companies or specific tickers.",
-        "query_type": "SQL"
-    }
+    return build_fallback_response([
+        "No data available to answer",
+        "Both live and cached data sources unavailable"
+    ])
 
 
 # ------------------------------------------------------
@@ -270,18 +506,123 @@ Provide an integrated, expert-level financial analysis following the mandatory s
 
 
 # ------------------------------------------------------
-# Main Orchestrator for API
+# LIVE DATA Chain (NEW - Priority Handler)
+# ------------------------------------------------------
+def run_live_data(question: str) -> Dict[str, Any]:
+    """
+    Fetch LIVE market data. Always runs FIRST for time-sensitive queries.
+    Returns standardized response with timestamp and confidence.
+    """
+    from datetime import datetime
+    
+    try:
+        from app.core.live_data_service import get_live_response, is_live_data_available
+        
+        if not is_live_data_available():
+            return {
+                "answer": {
+                    "summary": "Live data service unavailable",
+                    "live_price": None,
+                    "trend": "Unknown",
+                    "reasoning": ["Yahoo Finance service not configured or unreachable"],
+                    "timestamp": datetime.now().isoformat(),
+                    "confidence": "Low"
+                },
+                "query_type": "LIVE_DATA",
+                "source": "error"
+            }
+        
+        live_result = get_live_response(question)
+        
+        return {
+            "answer": live_result,
+            "query_type": "LIVE_DATA",
+            "source": live_result.get("source", "yahoo_finance")
+        }
+        
+    except Exception as e:
+        return {
+            "answer": {
+                "summary": f"Error fetching live data: {str(e)[:100]}",
+                "live_price": None,
+                "trend": "Unknown",
+                "reasoning": [str(e)],
+                "timestamp": datetime.now().isoformat(),
+                "confidence": "Low"
+            },
+            "query_type": "LIVE_DATA",
+            "source": "error"
+        }
+
+
+def run_live_data_with_docs(question: str) -> Dict[str, Any]:
+    """
+    Combine LIVE market data with document context.
+    Use for sentiment/trend queries that need both live data and analysis.
+    """
+    from datetime import datetime
+    
+    # Get live data first
+    live_result = run_live_data(question)
+    
+    # Get document context
+    doc_result = run_doc_rag(question)
+    
+    # Combine into unified response
+    live_data = live_result.get("answer", {})
+    
+    return {
+        "answer": {
+            "summary": live_data.get("summary", "Market data with context"),
+            "live_price": live_data.get("live_price"),
+            "price_change": live_data.get("price_change"),
+            "trend": live_data.get("trend", "Unknown"),
+            "reasoning": live_data.get("reasoning", []) + ["Document context included below"],
+            "timestamp": live_data.get("timestamp", datetime.now().isoformat()),
+            "confidence": live_data.get("confidence", "Medium"),
+            "document_context": doc_result.get("answer", "No document context available")
+        },
+        "query_type": "LIVE_DATA_DOC",
+        "source": "yahoo_finance + documents"
+    }
+
+
+# ------------------------------------------------------
+# Main Orchestrator for API (UPDATED with Live Data Priority)
 # ------------------------------------------------------
 def answer_financial_question(question: str) -> Dict[str, Any]:
+    """
+    Main entry point for all financial queries.
+    
+    ROUTING PRIORITY:
+    1. LIVE_DATA - Real-time market queries
+    2. LIVE_DATA_DOC - Live data + document context (sentiment/trend)
+    3. SQL - Database analytics
+    4. HYBRID - SQL + DOC
+    5. DOC - Document-only RAG (fallback)
+    """
     classification = classify_query(question)
     qtype = classification.get("query_type", "DOC")
 
-    if qtype == "DOC":
-        result = run_doc_rag(question)
+    # LIVE_DATA: Time-sensitive queries get live data FIRST
+    if qtype == "LIVE_DATA":
+        result = run_live_data(question)
+    
+    # LIVE_DATA_DOC: Sentiment/trend queries need live data + context
+    elif qtype == "LIVE_DATA_DOC":
+        result = run_live_data_with_docs(question)
+    
+    # SQL: Database analytics (historical)
     elif qtype == "SQL":
         result = run_sql_analytics(question)
-    else:
+    
+    # HYBRID: SQL + Document context
+    elif qtype == "HYBRID":
         result = run_hybrid(question)
+    
+    # DOC: Document-only RAG (fallback)
+    else:
+        result = run_doc_rag(question)
 
     result["router"] = classification
     return result

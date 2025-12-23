@@ -1,51 +1,73 @@
 # app/core/router.py
+"""
+LIVE DATA ROUTER - ALWAYS checks live data FIRST for market queries.
+
+CRITICAL: This router FORCES live data fetch for any market-related query.
+Document RAG is ONLY used for policy/regulation/explanation questions.
+"""
 from typing import Literal
 
-QueryType = Literal["DOC", "SQL", "HYBRID"]
+QueryType = Literal["LIVE_DATA", "LIVE_DATA_DOC", "SQL", "DOC", "HYBRID"]
 
 
 def classify_query(question: str) -> dict:
     """
-    Lightweight rule-based router used when LangChain prompt parsers are
-    unavailable. This is intentionally simple and intended for local testing.
+    LIVE-DATA-FIRST Router.
+    
+    ANY query about stocks, companies, prices, market, trends → LIVE_DATA
+    ONLY pure explanation/policy questions → DOC
     """
     q = question.lower()
-    sql_keywords = [
-        "sum",
-        "total",
-        "average",
-        "avg",
-        "revenue",
-        "profit",
-        "loss",
-        "growth",
-        "percent",
-        "percentage",
-        "q1",
-        "q2",
-        "q3",
-        "q4",
-        "quarter",
-        "year",
-        "compare",
-        "how many",
-        "count",
-        "what is the",
+    
+    # ================================================================
+    # DOCUMENT-ONLY KEYWORDS (Very narrow - only pure explanations)
+    # These are the ONLY queries that skip live data
+    # ================================================================
+    doc_only_keywords = [
+        "what is the definition",
+        "explain the concept",
+        "what does the term",
+        "regulatory framework",
+        "accounting standard",
+        "sec regulation",
+        "gaap rule"
     ]
-
-    doc_keywords = ["policy", "explain", "explain why", "guidance", "regulation", "summary", "what is"]
-
-    sql_score = sum(1 for k in sql_keywords if k in q)
-    doc_score = sum(1 for k in doc_keywords if k in q)
-
-    if sql_score >= 2 and doc_score >= 1:
-        qtype = "HYBRID"
-        reason = "Detected both numeric/SQL keywords and document/explanation keywords."
-    elif sql_score >= 1 and sql_score >= doc_score:
-        qtype = "SQL"
-        reason = "Detected numeric/aggregation keywords; route to SQL analytics."
-    else:
-        qtype = "DOC"
-        reason = "Defaulting to document retrieval and RAG."
-
-    return {"query_type": qtype, "reason": reason}
+    
+    # Check if this is a pure doc query (VERY narrow)
+    for kw in doc_only_keywords:
+        if kw in q:
+            return {
+                "query_type": "DOC",
+                "reason": "Pure definition/regulatory query - using documents.",
+                "requires_live": False,
+                "requires_docs": True
+            }
+    
+    # ================================================================
+    # EVERYTHING ELSE GETS LIVE DATA
+    # This is the DEFAULT behavior now
+    # ================================================================
+    
+    # Sentiment/trend queries get live + doc context
+    sentiment_keywords = [
+        "trend", "sentiment", "outlook", "should i",
+        "bullish", "bearish", "momentum", "invest"
+    ]
+    
+    for kw in sentiment_keywords:
+        if kw in q:
+            return {
+                "query_type": "LIVE_DATA_DOC",
+                "reason": "Sentiment query - fetching live data + context.",
+                "requires_live": True,
+                "requires_docs": True
+            }
+    
+    # DEFAULT: ALL market queries get LIVE DATA
+    # This includes: top, companies, stock, price, market, ticker, etc.
+    return {
+        "query_type": "LIVE_DATA",
+        "reason": "Market query - fetching live data from Yahoo Finance.",
+        "requires_live": True,
+        "requires_docs": False
+    }

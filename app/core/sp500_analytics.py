@@ -26,6 +26,13 @@ from app.core.response_utils import (
 _sp500_cache = None
 
 
+def clear_sp500_cache():
+    """Clear the S&P 500 data cache to force reload from source."""
+    global _sp500_cache
+    _sp500_cache = None
+    print("S&P 500 cache cleared")
+
+
 def _ensure_datetime(df: pd.DataFrame) -> pd.DataFrame:
     if 'date' in df.columns and df['date'].dtype == 'object':
         df = df.copy()
@@ -42,6 +49,39 @@ def _meta_for_df(df: pd.DataFrame, aggregation: str) -> Dict[str, Any]:
         "date_range": merge_date_range(start, end),
         "aggregation": aggregation,
     }
+
+
+# ============================================================
+# YAHOO FINANCE INTEGRATION
+# ============================================================
+# Set USE_YAHOO_DATA=true in .env to enable Yahoo Finance
+# Set USE_YAHOO_DATA=false to use only local CSV data
+
+def _load_sp500_from_yahoo() -> Optional[pd.DataFrame]:
+    """
+    YAHOO FINANCE INTEGRATION
+    Try to load S&P 500 data from Yahoo Finance.
+    Returns None if Yahoo is disabled or unavailable.
+    """
+    try:
+        from app.core.yahoo_service import is_yahoo_available, get_sp500_index
+        
+        if not is_yahoo_available():
+            return None
+        
+        print("Fetching S&P 500 data from Yahoo Finance...")
+        df = get_sp500_index(period="max", interval="1mo")
+        
+        if df is not None and not df.empty:
+            print(f"Yahoo Finance: Loaded {len(df)} S&P 500 data points")
+            return df
+            
+    except ImportError:
+        print("Yahoo service not available (yfinance not installed)")
+    except Exception as e:
+        print(f"Error loading from Yahoo Finance: {e}")
+    
+    return None
 
 
 def _load_sp500_from_csv() -> Optional[pd.DataFrame]:
@@ -72,20 +112,75 @@ def _load_sp500_from_csv() -> Optional[pd.DataFrame]:
 
 
 def get_sp500_data() -> pd.DataFrame:
-    """Get S&P 500 data from cache or CSV."""
+    """
+    Get S&P 500 data from cache, Yahoo Finance, or CSV.
+    
+    DATA SOURCE PRIORITY:
+    1. In-memory cache (if available)
+    2. Yahoo Finance (if USE_YAHOO_DATA=true and yfinance installed)
+    3. Local CSV file (fallback)
+    
+    To disable Yahoo Finance: set USE_YAHOO_DATA=false in .env
+    """
     global _sp500_cache
     
     if _sp500_cache is not None and not _sp500_cache.empty:
         return _sp500_cache
     
-    # Try loading from CSV first
-    df = _load_sp500_from_csv()
-    if df is not None and not df.empty:
-        _sp500_cache = df
-        return df
+    # YAHOO FINANCE: Try Yahoo first if enabled
+    yahoo_df = _load_sp500_from_yahoo()
     
-    # Return empty DataFrame as fallback
-    return pd.DataFrame()
+    # CSV FALLBACK: Load local CSV
+    csv_df = _load_sp500_from_csv()
+    
+    # MERGE STRATEGY: Combine data sources intelligently
+    if yahoo_df is not None and not yahoo_df.empty:
+        if csv_df is not None and not csv_df.empty:
+            # Smart merge: Use CSV for fundamental data (PE10, earnings, dividend)
+            # and Yahoo for latest price data
+            try:
+                # Ensure date columns are datetime
+                csv_df = csv_df.copy()
+                yahoo_df = yahoo_df.copy()
+                csv_df['date'] = pd.to_datetime(csv_df['date'])
+                yahoo_df['date'] = pd.to_datetime(yahoo_df['date'])
+                
+                # Get fundamental columns from CSV that Yahoo doesn't have
+                fundamental_cols = ['dividend', 'earnings', 'consumer_price_index', 
+                                   'long_interest_rate', 'real_price', 'real_dividend', 
+                                   'real_earnings', 'pe10']
+                csv_has_fundamentals = any(col in csv_df.columns for col in fundamental_cols)
+                
+                if csv_has_fundamentals:
+                    # Use CSV as base (has fundamental data), merge Yahoo price updates
+                    # First, update CSV with any newer Yahoo data
+                    csv_max_date = csv_df['date'].max()
+                    yahoo_newer = yahoo_df[yahoo_df['date'] > csv_max_date]
+                    
+                    if len(yahoo_newer) > 0:
+                        # Add newer Yahoo rows to CSV
+                        df = pd.concat([csv_df, yahoo_newer], ignore_index=True)
+                        df = df.sort_values('date').reset_index(drop=True)
+                        print(f"Merged data: CSV ({len(csv_df)}) + Yahoo newer ({len(yahoo_newer)}) = {len(df)} rows")
+                    else:
+                        df = csv_df
+                        print(f"Using CSV data: {len(df)} rows (has fundamental metrics)")
+                else:
+                    # CSV doesn't have fundamentals, use Yahoo
+                    df = yahoo_df
+                    print(f"Using Yahoo data: {len(df)} rows")
+            except Exception as e:
+                print(f"Merge error: {e}, falling back to CSV")
+                df = csv_df if csv_df is not None else yahoo_df
+        else:
+            df = yahoo_df
+    elif csv_df is not None and not csv_df.empty:
+        df = csv_df
+    else:
+        return pd.DataFrame()
+    
+    _sp500_cache = df
+    return df
 
 
 def ingest_sp500_data(df: pd.DataFrame) -> Dict[str, Any]:
@@ -319,7 +414,7 @@ def get_sp500_growth_analysis() -> Dict[str, Any]:
         yearly['return_pct'] = yearly['sp500'].pct_change() * 100
 
         rows: List[Dict[str, Any]] = []
-        for _, row in yearly.tail(25).iterrows():
+        for _, row in yearly.tail(50).iterrows():
             rows.append(
                 {
                     "period": int(row['year']),
@@ -501,6 +596,421 @@ def get_volatility_analysis(period_days: int = 365) -> Dict[str, Any]:
             summary={"status": "error"},
             errors=[f"Failed to calculate volatility: {e}"],
         )
+
+
+# ============================================================
+# ADVANCED FINANCIAL ANALYTICS
+# ============================================================
+
+def get_market_insights() -> Dict[str, Any]:
+    """
+    Generate comprehensive market insights based on computed metrics.
+    
+    Computes:
+    - Rolling returns (1Y, 5Y, 10Y CAGR)
+    - Rolling volatility (30D, 1Y)
+    - Maximum drawdown
+    - Market regime (Bull/Bear/Sideways using 200-day MA)
+    - Valuation status (using P/E percentiles)
+    - Trend strength score (0-100)
+    - Risk warnings and opportunity signals
+    """
+    df = get_sp500_data()
+    
+    if df is None or df.empty:
+        return analytics_response(
+            meta=_meta_for_df(pd.DataFrame(columns=['date']), "insights"),
+            data=[],
+            summary={"status": "no-data"},
+            errors=["No S&P 500 data available"],
+        )
+    
+    try:
+        df = _ensure_datetime(df.copy())
+        df = df.sort_values('date')
+        df['sp500_numeric'] = pd.to_numeric(df['sp500'], errors='coerce')
+        df['pe10_numeric'] = pd.to_numeric(df.get('pe10', pd.Series()), errors='coerce')
+        
+        latest = df.iloc[-1]
+        latest_price = float(latest['sp500_numeric']) if pd.notna(latest['sp500_numeric']) else 0
+        latest_date = latest['date'].strftime('%Y-%m-%d') if hasattr(latest['date'], 'strftime') else str(latest['date'])
+        
+        # ============ ROLLING RETURNS (CAGR) ============
+        def calc_cagr(start_val, end_val, years):
+            if start_val <= 0 or end_val <= 0 or years <= 0:
+                return None
+            return ((end_val / start_val) ** (1 / years) - 1) * 100
+        
+        returns = {}
+        for years, label in [(1, "1Y"), (5, "5Y"), (10, "10Y")]:
+            lookback = df[df['date'] >= (df['date'].max() - timedelta(days=years*365))]
+            if len(lookback) >= 2:
+                start_price = float(lookback['sp500_numeric'].iloc[0])
+                end_price = float(lookback['sp500_numeric'].iloc[-1])
+                cagr = calc_cagr(start_price, end_price, years)
+                returns[label] = round(cagr, 2) if cagr else None
+            else:
+                returns[label] = None
+        
+        # ============ VOLATILITY ============
+        # Detect data frequency (monthly vs daily)
+        date_diff = df['date'].diff().dt.days.median()
+        is_monthly = date_diff > 20  # Monthly data has ~30 days between records
+        annualization_factor = 12 if is_monthly else 252  # 12 months or 252 trading days
+        
+        df['period_return'] = df['sp500_numeric'].pct_change() * 100
+        
+        # Recent volatility (annualized)
+        lookback_periods = 12 if is_monthly else 30  # 1 year for monthly, 30 days for daily
+        vol_recent = df['period_return'].tail(lookback_periods).std() * (annualization_factor ** 0.5) if len(df) >= lookback_periods else None
+        
+        # 1-year volatility (annualized)
+        periods_in_year = 12 if is_monthly else 252
+        df_1y = df.tail(periods_in_year) if len(df) >= periods_in_year else df
+        vol_1y = df_1y['period_return'].std() * (annualization_factor ** 0.5) if len(df_1y) >= (6 if is_monthly else 30) else None
+        
+        # Calculate volatility percentile using rolling window approach
+        vol_percentile = None
+        if vol_1y is not None:
+            # Calculate rolling volatilities for percentile
+            window_size = periods_in_year
+            min_periods = window_size // 2
+            df['rolling_vol'] = df['period_return'].rolling(window=window_size, min_periods=min_periods).std() * (annualization_factor ** 0.5)
+            rolling_vols = df['rolling_vol'].dropna()
+            if len(rolling_vols) > 10:
+                vol_percentile = (rolling_vols < vol_1y).mean() * 100
+        
+        # ============ MAXIMUM DRAWDOWN ============
+        df['cummax'] = df['sp500_numeric'].cummax()
+        df['drawdown'] = (df['sp500_numeric'] - df['cummax']) / df['cummax'] * 100
+        max_drawdown = float(df['drawdown'].min()) if not df['drawdown'].isna().all() else None
+        
+        # Current drawdown
+        current_drawdown = float(df['drawdown'].iloc[-1]) if not pd.isna(df['drawdown'].iloc[-1]) else 0
+        
+        # ============ MARKET REGIME (200-day MA equivalent) ============
+        # For monthly data: 200 days ≈ 10 months
+        # For daily data: 200 days
+        ma_window = 10 if is_monthly else 200
+        ma_min_periods = 5 if is_monthly else 50
+        df['ma_200'] = df['sp500_numeric'].rolling(window=ma_window, min_periods=ma_min_periods).mean()
+        latest_ma200 = float(df['ma_200'].iloc[-1]) if pd.notna(df['ma_200'].iloc[-1]) else None
+        
+        if latest_ma200 and latest_price:
+            ma_diff_pct = ((latest_price - latest_ma200) / latest_ma200) * 100
+            if ma_diff_pct > 5:
+                regime = "Bull"
+                regime_desc = "Above 200-day MA"
+            elif ma_diff_pct > 0:
+                regime = "Bullish"
+                regime_desc = "Above 200-day MA"
+            elif ma_diff_pct > -5:
+                regime = "Sideways"
+                regime_desc = "Near 200-day MA"
+            else:
+                regime = "Bear"
+                regime_desc = "Below 200-day MA"
+        else:
+            regime = "Unknown"
+            regime_desc = "Insufficient data"
+            ma_diff_pct = None
+        
+        # ============ VALUATION STATUS (P/E Percentile) ============
+        pe_current = float(latest['pe10_numeric']) if pd.notna(latest.get('pe10_numeric')) else None
+        pe_percentile = None
+        valuation_status = "Unknown"
+        
+        if pe_current and not df['pe10_numeric'].isna().all():
+            pe_series = df['pe10_numeric'].dropna()
+            pe_percentile = (pe_series < pe_current).mean() * 100
+            
+            if pe_percentile >= 80:
+                valuation_status = "Overvalued"
+            elif pe_percentile >= 60:
+                valuation_status = "Elevated"
+            elif pe_percentile >= 40:
+                valuation_status = "Fair"
+            elif pe_percentile >= 20:
+                valuation_status = "Attractive"
+            else:
+                valuation_status = "Undervalued"
+        
+        pe_avg = float(df['pe10_numeric'].mean()) if not df['pe10_numeric'].isna().all() else None
+        
+        # ============ TREND STRENGTH SCORE (0-100) ============
+        trend_score = 50  # Base score
+        
+        # Price vs MA200 contribution (+/- 20 points)
+        if ma_diff_pct is not None:
+            trend_score += min(20, max(-20, ma_diff_pct * 2))
+        
+        # Recent momentum (3-month return) contribution (+/- 15 points)
+        df_3m = df[df['date'] >= (df['date'].max() - timedelta(days=90))]
+        if len(df_3m) >= 2:
+            momentum_3m = ((df_3m['sp500_numeric'].iloc[-1] / df_3m['sp500_numeric'].iloc[0]) - 1) * 100
+            trend_score += min(15, max(-15, momentum_3m))
+        
+        # Volatility contribution (-15 for high vol, +10 for low vol)
+        # Compare current volatility to historical median
+        if vol_1y is not None:
+            hist_vol_median = df['rolling_vol'].median() if 'rolling_vol' in df.columns and not df['rolling_vol'].isna().all() else None
+            if hist_vol_median:
+                if vol_1y > hist_vol_median * 1.2:
+                    trend_score -= 15
+                elif vol_1y < hist_vol_median * 0.8:
+                    trend_score += 10
+        
+        trend_score = min(100, max(0, round(trend_score)))
+        
+        # ============ GENERATE INSIGHTS ============
+        insights = []
+        warnings = []
+        opportunities = []
+        
+        # Market summary - use clearer language for MA comparison
+        if regime in ["Bull", "Bullish"]:
+            if abs(ma_diff_pct) > 10:
+                insights.append(f"Market is in a strong bull phase, significantly above the 200-day moving average (+{abs(ma_diff_pct):.1f}%).")
+            else:
+                insights.append(f"Market is in a bull phase, trading {abs(ma_diff_pct):.1f}% above the 200-day moving average.")
+        elif regime == "Bear":
+            if abs(ma_diff_pct) > 10:
+                insights.append(f"Market is in a bearish phase, significantly below the 200-day moving average ({ma_diff_pct:.1f}%).")
+            else:
+                insights.append(f"Market is in a bearish phase, trading {abs(ma_diff_pct):.1f}% below the 200-day moving average.")
+        else:
+            insights.append(f"Market is consolidating near the 200-day moving average ({ma_diff_pct:+.1f}%).")
+        
+        # Volatility insight
+        if vol_1y:
+            if vol_percentile and vol_percentile > 70:
+                warnings.append(f"Volatility is elevated ({vol_1y:.1f}% annualized), indicating higher risk.")
+            elif vol_percentile and vol_percentile < 30:
+                insights.append(f"Volatility is below average ({vol_1y:.1f}% annualized), indicating calmer markets.")
+        
+        # Valuation insight
+        if pe_percentile is not None:
+            if pe_percentile >= 80:
+                warnings.append(f"Valuation is elevated (PE10: {pe_current:.1f}, {pe_percentile:.0f}th percentile historically).")
+            elif pe_percentile <= 30:
+                opportunities.append(f"Valuation is attractive (PE10: {pe_current:.1f}, {pe_percentile:.0f}th percentile historically).")
+        
+        # Drawdown opportunity
+        if current_drawdown and current_drawdown < -15:
+            opportunities.append(f"Current drawdown of {current_drawdown:.1f}% may present buying opportunity if trend is improving.")
+        
+        # Build summary text
+        summary_text = " ".join(insights)
+        if warnings:
+            summary_text += " ⚠️ " + " ".join(warnings)
+        if opportunities:
+            summary_text += " 💡 " + " ".join(opportunities)
+        
+        # ============ RESPONSE ============
+        result = {
+            "latest_price": round(latest_price, 2),
+            "latest_date": latest_date,
+            "returns": {
+                "1y": round(returns.get("1Y", 0) / 100, 4) if returns.get("1Y") else None,
+                "5y_cagr": round(returns.get("5Y", 0) / 100, 4) if returns.get("5Y") else None,
+                "10y_cagr": round(returns.get("10Y", 0) / 100, 4) if returns.get("10Y") else None,
+            },
+            "volatility": {
+                "30d": round(vol_recent / 100, 4) if vol_recent else None,
+                "1y": round(vol_1y / 100, 4) if vol_1y else None,
+                "percentile": round(vol_percentile, 0) if vol_percentile else None,
+            },
+            "max_drawdown": {
+                "value": round(max_drawdown / 100, 4) if max_drawdown else None,
+                "current": round(current_drawdown / 100, 4) if current_drawdown else 0,
+            },
+            "market_regime": {
+                "regime": regime,
+                "description": regime_desc,
+                "ma_200": round(latest_ma200, 2) if latest_ma200 else None,
+                "price_vs_ma_pct": round(ma_diff_pct, 2) if ma_diff_pct else None,
+            },
+            "valuation": {
+                "current_pe10": round(pe_current, 2) if pe_current else None,
+                "avg_pe10": round(pe_avg, 2) if pe_avg else None,
+                "percentile": round(pe_percentile, 0) if pe_percentile else None,
+                "status": valuation_status,
+            },
+            "trend_score": {
+                "score": trend_score,
+                "label": "Strong" if trend_score >= 70 else "Moderate" if trend_score >= 40 else "Weak",
+            },
+            "summary_text": summary_text,
+            "warnings": warnings,
+            "opportunities": opportunities,
+            "status": "ok",
+        }
+        
+        # Return flat result for easier frontend consumption
+        return result
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "error": f"Failed to generate insights: {e}",
+        }
+
+
+
+def get_enhanced_decade_performance() -> Dict[str, Any]:
+    """
+    Get enhanced decade performance with CAGR, max drawdown, and volatility.
+    """
+    df = get_sp500_data()
+    
+    if df is None or df.empty:
+        return analytics_response(
+            meta=_meta_for_df(pd.DataFrame(columns=['date']), "decade"),
+            data=[],
+            summary={"status": "no-data"},
+            errors=["No S&P 500 data available"],
+        )
+    
+    try:
+        df = _ensure_datetime(df.copy())
+        df = df.sort_values('date')
+        df['sp500_numeric'] = pd.to_numeric(df['sp500'], errors='coerce')
+        df['decade'] = (df['date'].dt.year // 10) * 10
+        df['daily_return'] = df['sp500_numeric'].pct_change()
+        
+        rows = []
+        for decade, group in df.groupby('decade'):
+            if len(group) < 10:
+                continue
+            
+            # Start and end values for CAGR
+            start_val = group['sp500_numeric'].iloc[0]
+            end_val = group['sp500_numeric'].iloc[-1]
+            years = (group['date'].max() - group['date'].min()).days / 365.25
+            
+            # CAGR
+            cagr = None
+            if start_val > 0 and end_val > 0 and years > 0:
+                cagr = ((end_val / start_val) ** (1 / years) - 1) * 100
+            
+            # Volatility (annualized)
+            volatility = group['daily_return'].std() * (252 ** 0.5) * 100 if len(group) > 30 else None
+            
+            # Max Drawdown
+            group = group.copy()
+            group['cummax'] = group['sp500_numeric'].cummax()
+            group['drawdown'] = (group['sp500_numeric'] - group['cummax']) / group['cummax'] * 100
+            max_dd = group['drawdown'].min()
+            
+            # Total return
+            total_return = ((end_val / start_val) - 1) * 100 if start_val > 0 else None
+            
+            rows.append({
+                "decade": int(decade),
+                "label": f"{int(decade)}s",
+                "start_price": round(start_val, 2) if pd.notna(start_val) else None,
+                "end_price": round(end_val, 2) if pd.notna(end_val) else None,
+                "cagr": round(cagr / 100, 4) if cagr else None,
+                "total_return": round(total_return / 100, 4) if total_return else None,
+                "volatility": round(volatility / 100, 4) if volatility else None,
+                "max_drawdown": round(max_dd / 100, 4) if pd.notna(max_dd) else None,
+                "data_points": len(group),
+            })
+        
+        # Sort by decade ascending for chart display
+        rows = sorted(rows, key=lambda x: x['decade'])
+        
+        return {
+            "status": "ok",
+            "decades": rows,
+            "count": len(rows),
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": f"Failed to calculate decade performance: {e}",
+        }
+
+
+def get_full_correlation_matrix() -> Dict[str, Any]:
+    """
+    Get full correlation matrix between all metrics.
+    """
+    df = get_sp500_data()
+    
+    if df is None or df.empty:
+        return analytics_response(
+            meta=_meta_for_df(pd.DataFrame(columns=['date']), "correlation"),
+            data=[],
+            summary={"status": "no-data"},
+            errors=["No S&P 500 data available"],
+        )
+    
+    try:
+        metrics = ['sp500', 'dividend', 'earnings', 'pe10']
+        labels = {
+            'sp500': 'S&P 500',
+            'dividend': 'Dividend',
+            'earnings': 'Earnings',
+            'pe10': 'PE10'
+        }
+        
+        available = [m for m in metrics if m in df.columns]
+        df_numeric = df[available].apply(pd.to_numeric, errors='coerce')
+        
+        corr_matrix = df_numeric.corr()
+        
+        # Build matrix as nested structure
+        matrix_data = []
+        for row_metric in available:
+            row_data = {
+                "metric": row_metric,
+                "label": labels.get(row_metric, row_metric.upper()),
+            }
+            for col_metric in available:
+                val = corr_matrix.loc[row_metric, col_metric]
+                row_data[col_metric] = round(val, 3) if pd.notna(val) else None
+            matrix_data.append(row_data)
+        
+        # Also provide flat correlation list for S&P 500
+        correlations = {}
+        for col in available:
+            if col != 'sp500':
+                val = corr_matrix.loc['sp500', col]
+                correlations[col] = {
+                    "value": round(val, 3) if pd.notna(val) else None,
+                    "strength": _correlation_strength(val) if pd.notna(val) else "N/A",
+                }
+        
+        return {
+            "status": "ok",
+            "correlations": correlations,
+            "metrics": available,
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": f"Failed to calculate correlations: {e}",
+        }
+
+
+def _correlation_strength(corr: float) -> str:
+    """Classify correlation strength."""
+    abs_corr = abs(corr)
+    if abs_corr >= 0.8:
+        return "Very Strong"
+    elif abs_corr >= 0.6:
+        return "Strong"
+    elif abs_corr >= 0.4:
+        return "Moderate"
+    elif abs_corr >= 0.2:
+        return "Weak"
+    else:
+        return "Very Weak"
 
 
 def get_sp500_timeseries(metric: str = "sp500", start_year: Optional[int] = None) -> Dict[str, Any]:

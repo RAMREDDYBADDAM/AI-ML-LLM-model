@@ -863,6 +863,45 @@ input[type="file"] {
 }
 
 /* ============================================================================
+   Status Badges
+   ============================================================================ */
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.ok,
+.status-badge.positive {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.status-badge.error,
+.status-badge.negative {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.status-badge.warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+/* Numeric styling */
+.positive {
+  color: var(--success);
+}
+
+.negative {
+  color: var(--error);
+}
+
+/* ============================================================================
    Accessibility
    ============================================================================ */
 
@@ -887,5 +926,174 @@ input[type="file"] {
   :root {
     --primary: #003d5c;
     --accent: #e67700;
+  }
+}
+
+/* ============================================================================
+   Spinner Animation
+   ============================================================================ */
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--neutral-300);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-lg {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+/* ============================================================================
+   S&P 500 Smart Chat - Enhanced UI Styles
+   ============================================================================ */
+
+/* Conversation Container */
+#sp500-conversation {
+  scrollbar-width: thin;
+  scrollbar-color: var(--neutral-300) transparent;
+}
+
+#sp500-conversation::-webkit-scrollbar {
+  width: 6px;
+}
+
+#sp500-conversation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#sp500-conversation::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+  border-radius: 3px;
+}
+
+/* Analysis Section Collapsible */
+.analysis-section button:hover {
+  background: var(--neutral-50);
+}
+
+.analysis-section button:focus {
+  outline: none;
+  background: var(--neutral-50);
+}
+
+/* Quick Question Button States */
+#quick-questions-grid .quick-question {
+  transition: all 0.15s ease;
+}
+
+#quick-questions-grid .quick-question:hover {
+  transform: translateX(2px);
+  background: #f1f5f9;
+}
+
+#quick-questions-grid .quick-question.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+/* Ask Button Hover State */
+#sp500-ask-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.25);
+}
+
+#sp500-ask-btn:disabled {
+  background: linear-gradient(135deg, #94a3b8 0%, #cbd5e1 100%);
+  cursor: not-allowed;
+}
+
+/* Data Coverage Badge */
+#data-coverage-badge {
+  animation: fadeIn 0.5s ease;
+}
+
+/* Chat Response Cards Animation */
+#sp500-responses > div {
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mini Chart Container */
+#chat-mini-chart {
+  border-radius: var(--radius-sm);
+}
+
+/* Input Placeholder Styling */
+#sp500-question::placeholder {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* Keyboard Shortcut Badge */
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* Trust Disclaimer Styling */
+.trust-disclaimer {
+  font-size: 11px;
+  color: var(--neutral-500);
+  padding: 10px 16px;
+  background: var(--neutral-50);
+  border-top: 1px solid var(--neutral-200);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Loading State Pulse */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive adjustments for chat */
+@media (max-width: 1024px) {
+  #tab-sp500-chat > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+  
+  #tab-sp500-chat > div:last-child > div:first-child {
+    border-right: none !important;
+    padding-right: 0 !important;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+  
+  #tab-sp500-chat > div:last-child > div:last-child {
+    padding-left: 0 !important;
   }
 }

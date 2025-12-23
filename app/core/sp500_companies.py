@@ -54,7 +54,13 @@ def _get_sample_sp500_companies() -> List[Dict[str, Any]]:
 
 def get_sp500_companies(limit: int = 50) -> List[Dict[str, Any]]:
     """
-    Get list of S&P 500 companies from database or sample data.
+    Get list of S&P 500 companies from Yahoo Finance, database, or sample data.
+    
+    DATA SOURCE PRIORITY:
+    1. In-memory cache (if available)
+    2. Yahoo Finance (if USE_YAHOO_DATA=true)
+    3. PostgreSQL database (if configured)
+    4. Sample/fallback data
     
     Args:
         limit: Number of companies to return (default 50)
@@ -68,7 +74,48 @@ def get_sp500_companies(limit: int = 50) -> List[Dict[str, Any]]:
     if _sp500_companies_cache is not None and len(_sp500_companies_cache) > 0:
         return _sp500_companies_cache[:limit]
     
-    # Try to fetch from database
+    # ============================================================
+    # YAHOO FINANCE INTEGRATION
+    # Try Yahoo Finance first if enabled
+    # ============================================================
+    try:
+        from app.core.yahoo_service import is_yahoo_available, yahoo_service
+        
+        if is_yahoo_available():
+            print("Fetching company data from Yahoo Finance...")
+            yahoo_companies = yahoo_service.get_top_companies_data()
+            
+            if yahoo_companies:
+                # Convert Yahoo format to our format
+                companies = []
+                for yc in yahoo_companies:
+                    companies.append({
+                        "ticker": yc.get("ticker"),
+                        "name": yc.get("name"),
+                        "sector": yc.get("sector", "Unknown"),
+                        "revenue": yc.get("revenue"),
+                        "market_cap": yc.get("market_cap"),
+                        "eps": yc.get("eps"),
+                        "pe_ratio": yc.get("pe_ratio"),
+                        "current_price": yc.get("current_price"),
+                        "period": "Live",
+                        "source": "yahoo_finance",
+                    })
+                
+                if companies:
+                    sanitized = [_sanitize_company_record(row) for row in companies]
+                    _sp500_companies_cache = sanitized
+                    print(f"Yahoo Finance: Loaded {len(sanitized)} companies")
+                    return sanitized[:limit]
+    except ImportError:
+        pass  # Yahoo service not available
+    except Exception as e:
+        print(f"Yahoo Finance error: {e}")
+    
+    # ============================================================
+    # DATABASE FALLBACK
+    # Try to fetch from PostgreSQL if configured
+    # ============================================================
     if settings.database_url:
         try:
             conn = psycopg2.connect(settings.database_url)
@@ -92,7 +139,10 @@ def get_sp500_companies(limit: int = 50) -> List[Dict[str, Any]]:
         except Exception as e:
             print(f"Error fetching companies from database: {e}")
     
-    # Return sample data
+    # ============================================================
+    # SAMPLE DATA FALLBACK
+    # Return hardcoded sample data as last resort
+    # ============================================================
     sample = [_sanitize_company_record(row) for row in _get_sample_sp500_companies()]
     _sp500_companies_cache = sample
     return sample[:limit]
@@ -102,12 +152,52 @@ def get_company_data(ticker: str) -> Optional[Dict[str, Any]]:
     """
     Get detailed data for a specific company.
     
+    DATA SOURCE PRIORITY:
+    1. Yahoo Finance (live data)
+    2. PostgreSQL database
+    3. Sample data
+    
     Args:
         ticker: Stock ticker symbol (e.g., "AAPL")
         
     Returns:
         Dictionary with company data including latest metrics
     """
+    # ============================================================
+    # YAHOO FINANCE - Try Yahoo first for live data
+    # ============================================================
+    try:
+        from app.core.yahoo_service import is_yahoo_available, yahoo_service
+        
+        if is_yahoo_available():
+            yahoo_data = yahoo_service.get_company_info(ticker)
+            
+            if yahoo_data and yahoo_data.get("name"):
+                company = {
+                    "ticker": ticker.upper(),
+                    "name": yahoo_data.get("name"),
+                    "sector": yahoo_data.get("sector", "Unknown"),
+                    "revenue": yahoo_data.get("revenue"),
+                    "market_cap": yahoo_data.get("market_cap"),
+                    "eps": yahoo_data.get("eps"),
+                    "pe_ratio": yahoo_data.get("pe_ratio"),
+                    "current_price": yahoo_data.get("current_price"),
+                    "day_high": yahoo_data.get("day_high"),
+                    "day_low": yahoo_data.get("day_low"),
+                    "year_high": yahoo_data.get("year_high"),
+                    "year_low": yahoo_data.get("year_low"),
+                    "period": "Live",
+                    "source": "yahoo_finance",
+                }
+                return _sanitize_company_record(company)
+    except ImportError:
+        pass  # Yahoo service not available
+    except Exception as e:
+        print(f"Yahoo Finance error for {ticker}: {e}")
+    
+    # ============================================================
+    # DATABASE FALLBACK
+    # ============================================================
     if not settings.database_url:
         # Return sample data for demo
         sample = _get_sample_sp500_companies()

@@ -169,21 +169,17 @@ async def answer_sp500_question(question: str) -> Dict[str, Any]:
         # Format data for LLM
         formatted_data = _format_data_for_llm(data)
         
-        # Build prompt for LLM
-        system_prompt = """You are a financial analyst expert in S&P 500 data analysis. 
-You have access to historical S&P 500 data from 1871 to present including price, dividends, earnings, PE ratios, and economic indicators.
-Answer questions about the S&P 500 data accurately and comprehensively.
-Provide specific numbers and percentages when discussing data.
-Be concise but informative."""
+        # Build prompt for LLM - optimized for speed
+        system_prompt = """You are a S&P 500 analyst. Answer questions concisely with specific numbers.
+Use the data provided. Be direct - no lengthy introductions.
+Format: Use bullet points for multiple facts. Include % changes and price levels when relevant."""
         
-        user_prompt = f"""Based on the following S&P 500 data, please answer this question:
+        user_prompt = f"""Question: {question}
 
-QUESTION: {question}
-
-DATA CONTEXT:
+Data:
 {formatted_data}
 
-Please provide a clear, data-backed answer. Include specific numbers and insights from the data provided."""
+Give a concise, data-backed answer (2-3 sentences max for simple questions, up to 5 for complex ones)."""
         
         # Call LLM
         llm_messages = [

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Financial Analytics Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -214,6 +215,56 @@
             color: #e74c3c;
         }
 
+        .scrollable-table-wrapper {
+            position: relative;
+        }
+
+        .scrollable-table {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+        }
+
+        .scrollable-table table {
+            margin-bottom: 0;
+        }
+
+        .scrollable-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            z-index: 1;
+        }
+
+        .scroll-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .scroll-btn {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .scroll-btn:hover {
+            background: #2980b9;
+        }
+
+        .scroll-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
         .chart-container {
             background: white;
             border-radius: 12px;
@@ -331,6 +382,124 @@
             margin-bottom: 15px;
             opacity: 0.5;
         }
+
+        /* RAG Response Markdown Styling */
+        .markdown-content {
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .markdown-content h2 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .markdown-content h3 {
+            color: #34495e;
+            font-size: 16px;
+            margin: 15px 0 8px 0;
+        }
+
+        .markdown-content h4 {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin: 12px 0 6px 0;
+        }
+
+        .markdown-content p {
+            margin: 10px 0;
+            color: #333;
+        }
+
+        .markdown-content ul, .markdown-content ol {
+            margin: 10px 0 10px 20px;
+            padding-left: 15px;
+        }
+
+        .markdown-content li {
+            margin: 6px 0;
+            color: #444;
+        }
+
+        .markdown-content strong {
+            color: #2c3e50;
+        }
+
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .markdown-content th {
+            background: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .markdown-content td {
+            padding: 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .markdown-content tr:hover {
+            background: #f8f9fa;
+        }
+
+        .markdown-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin: 15px 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .rag-response-container {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: 1px solid #dee2e6;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .query-type-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .query-type-badge.doc {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .query-type-badge.sql {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .query-type-badge.hybrid {
+            background: #fff3cd;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -393,20 +562,31 @@
             <!-- RAG Q&A Section -->
             <div class="card" style="margin-top: 20px;">
                 <h2>🤖 Financial AI Assistant (RAG)</h2>
-                <p style="color: #7f8c8d; margin-bottom: 15px;">Ask questions about S&P 500 data, financial metrics, or company performance.</p>
+                <p style="color: #7f8c8d; margin-bottom: 15px;">Ask questions about S&P 500 data, financial metrics, company performance, or market trends. Get structured analysis with pros, cons, and actionable suggestions.</p>
+                
+                <!-- Example Questions -->
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; color: #7f8c8d;">Try these example questions:</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                        <button onclick="setQuestion('What is the S&P 500 and how has it performed historically?')" style="font-size: 11px; padding: 6px 10px; background: #ecf0f1; color: #2c3e50;">📈 S&P 500 Overview</button>
+                        <button onclick="setQuestion('Tell me about Apple stock and its financial performance')" style="font-size: 11px; padding: 6px 10px; background: #ecf0f1; color: #2c3e50;">🍎 Apple Analysis</button>
+                        <button onclick="setQuestion('Compare the top tech companies by revenue')" style="font-size: 11px; padding: 6px 10px; background: #ecf0f1; color: #2c3e50;">🔄 Compare Tech</button>
+                        <button onclick="setQuestion('What are the current market trends and outlook?')" style="font-size: 11px; padding: 6px 10px; background: #ecf0f1; color: #2c3e50;">📊 Market Trends</button>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label>Your Question</label>
                     <textarea id="rag-question" rows="2" placeholder="e.g., What was the average S&P 500 value in 2024? How did the market perform in the 2020s?"></textarea>
                 </div>
                 <button onclick="askRAGQuestion()" id="rag-submit-btn" style="margin-bottom: 15px;">💬 Ask Question</button>
                 <div id="rag-response" style="display: none;">
-                    <div class="metric">
-                        <label>Query Type</label>
-                        <div class="metric-value" id="rag-query-type">-</div>
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                        <span class="query-type-badge" id="rag-query-type-badge">DOC</span>
+                        <span style="color: #7f8c8d; font-size: 12px;">Query processed successfully</span>
                     </div>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                        <label style="margin-bottom: 10px;">Answer</label>
-                        <div id="rag-answer" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                    <div class="rag-response-container">
+                        <div id="rag-answer" class="markdown-content"></div>
                     </div>
                 </div>
                 <div id="rag-error" class="error" style="display: none;"></div>
@@ -501,14 +681,24 @@
 
                 <div class="chart-container">
                     <h3>S&P 500 Annual Performance</h3>
-                    <table id="profitability-table">
-                        <thead>
-                            <tr><th>Year</th><th>Performance</th><th class="number">Return %</th></tr>
-                        </thead>
-                        <tbody id="profitability-tbody">
-                            <tr><td colspan="3" class="loading">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                    <div class="scrollable-table-wrapper">
+                        <div class="scrollable-table" id="annual-scroll-container">
+                            <table id="profitability-table">
+                                <thead>
+                                    <tr><th>Year</th><th>Performance</th><th class="number">Return %</th></tr>
+                                </thead>
+                                <tbody id="profitability-tbody">
+                                    <tr><td colspan="3" class="loading">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="scroll-controls">
+                            <button class="scroll-btn" onclick="scrollAnnualTable('top')" title="Go to Oldest">⏫ Oldest</button>
+                            <button class="scroll-btn" onclick="scrollAnnualTable('up')" title="Scroll Up">⬆ Up</button>
+                            <button class="scroll-btn" onclick="scrollAnnualTable('down')" title="Scroll Down">⬇ Down</button>
+                            <button class="scroll-btn" onclick="scrollAnnualTable('bottom')" title="Go to Latest">⏬ Latest</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -765,13 +955,56 @@
                             fill: true,
                             tension: 0.4,
                             pointRadius: 0,
+                            pointHoverRadius: 8,
+                            pointHoverBackgroundColor: '#3498db',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 3,
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: false } }
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                backgroundColor: 'rgba(44, 62, 80, 0.95)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: false,
+                                callbacks: {
+                                    title: function(context) {
+                                        return '📅 ' + context[0].label;
+                                    },
+                                    label: function(context) {
+                                        const value = context.parsed.y;
+                                        return '💹 S&P 500: $' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                    }
+                                }
+                            },
+                            crosshair: false
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        onHover: (event, chartElement) => {
+                            event.native.target.style.cursor = chartElement.length ? 'crosshair' : 'default';
+                        }
                     }
                 });
             } catch (err) {
@@ -910,7 +1143,7 @@
 
         async function loadProfitability() {
             try {
-                const res = await fetch('http://127.0.0.1:8000/api/insights/profitability');
+                const res = await fetch('http://127.0.0.1:8000/api/insights/profitability?limit=50');
                 const data = await res.json();
                 
                 if (data.summary?.status !== 'ok' || !data.data) return;
@@ -918,7 +1151,7 @@
                 const tbody = document.getElementById('profitability-tbody');
                 tbody.innerHTML = '';
                 
-                data.data.slice(0, 10).forEach(item => {
+                data.data.forEach(item => {
                     const returnPct = item.return_pct || 0;
                     const performanceClass = returnPct >= 0 ? 'positive' : 'negative';
                     const performanceLabel = item.growth || (returnPct >= 0 ? 'Strong' : 'Weak');
@@ -932,6 +1165,29 @@
                 });
             } catch (err) {
                 console.error('Error loading profitability:', err);
+            }
+        }
+
+        // Scroll function for S&P 500 Annual Performance table
+        function scrollAnnualTable(direction) {
+            const container = document.getElementById('annual-scroll-container');
+            if (!container) return;
+            
+            const scrollAmount = 150;
+            
+            switch(direction) {
+                case 'up':
+                    container.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+                    break;
+                case 'down':
+                    container.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                    break;
+                case 'top':
+                    container.scrollTo({ top: 0, behavior: 'smooth' });
+                    break;
+                case 'bottom':
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                    break;
             }
         }
 
@@ -999,6 +1255,11 @@
         // ============================================================
         // RAG Q&A FUNCTION
         // ============================================================
+        
+        function setQuestion(question) {
+            document.getElementById('rag-question').value = question;
+        }
+        
         async function askRAGQuestion() {
             const question = document.getElementById('rag-question').value.trim();
             if (!question) {
@@ -1028,8 +1289,23 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    document.getElementById('rag-query-type').textContent = data.query_type || 'UNKNOWN';
-                    document.getElementById('rag-answer').textContent = data.answer || 'No answer received';
+                    const queryType = data.query_type || 'UNKNOWN';
+                    const badge = document.getElementById('rag-query-type-badge');
+                    badge.textContent = queryType;
+                    badge.className = 'query-type-badge ' + queryType.toLowerCase();
+                    
+                    // Parse markdown and render
+                    const answer = data.answer || 'No answer received';
+                    const answerDiv = document.getElementById('rag-answer');
+                    
+                    // Check if marked library is available
+                    if (typeof marked !== 'undefined') {
+                        answerDiv.innerHTML = marked.parse(answer);
+                    } else {
+                        // Fallback: basic markdown conversion
+                        answerDiv.innerHTML = basicMarkdownToHtml(answer);
+                    }
+                    
                     responseDiv.style.display = 'block';
                 } else {
                     errorDiv.textContent = `Error: ${data.detail || data.error || 'Unknown error'}`;
@@ -1042,6 +1318,27 @@
                 submitBtn.disabled = false;
                 submitBtn.textContent = '💬 Ask Question';
             }
+        }
+        
+        // Basic markdown to HTML conversion (fallback)
+        function basicMarkdownToHtml(text) {
+            return text
+                // Headers
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                // Bold
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Italic
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Lists
+                .replace(/^\- (.*$)/gm, '<li>$1</li>')
+                .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+                // Line breaks
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                // Wrap in paragraph
+                .replace(/^(.*)$/s, '<p>$1</p>');
         }
 
         // ============================================================
