@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RaiseBull | AI Market Intelligence Platform</title>
+  <meta name="description" content="RaiseBull is an AI-powered market intelligence platform for stock prediction, buy/sell signals, and financial decision analytics." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #070b12;
+      --bg-elev: #0f1726;
+      --bg-soft: #111d30;
+      --panel: rgba(16, 27, 44, 0.72);
+      --line: rgba(130, 153, 188, 0.22);
+      --text: #e9f2ff;
+      --muted: #9cb1cd;
+      --accent: #2d7cff;
+      --accent-2: #1de4a7;
+      --up: #19d99b;
+      --down: #ff637e;
+      --warn: #f8b949;
+      --radius: 16px;
+      --radius-lg: 22px;
+      --shadow: 0 12px 42px rgba(0, 0, 0, 0.4);
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --container: min(1200px, calc(100% - 40px));
+      --section-y: 92px;
+      --transition: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(45, 124, 255, 0.22) 0, rgba(45, 124, 255, 0) 38%),
+        radial-gradient(circle at 88% 12%, rgba(29, 228, 167, 0.15) 0, rgba(29, 228, 167, 0) 30%),
+        linear-gradient(180deg, #060a12 0%, #091120 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container { width: var(--container); margin: 0 auto; }
+
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.22;
+      background-image:
+        linear-gradient(rgba(120, 145, 181, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120, 145, 181, 0.08) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: radial-gradient(circle at center, black 28%, transparent 88%);
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #cfe0ff;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(108, 151, 218, 0.35);
+      background: rgba(19, 34, 58, 0.55);
+      backdrop-filter: blur(8px);
+    }
+
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 12px var(--accent-2); }
+
+    .section { padding: var(--section-y) 0; }
+    .section-title {
+      margin: 14px 0 14px;
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+    }
+    .section-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      max-width: 720px;
+      line-height: 1.7;
+    }
+
+    .mono { font-family: var(--mono); }
+    .up { color: var(--up); }
+    .down { color: var(--down); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-weight: 700;
+      font-size: 14px;
+      border: 1px solid transparent;
+      transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border-color var(--transition);
+      cursor: pointer;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #46a0ff 100%);
+      color: #fff;
+      box-shadow: 0 8px 28px rgba(45, 124, 255, 0.45);
+    }
+    .btn-primary:hover { box-shadow: 0 12px 34px rgba(45, 124, 255, 0.52); }
+    .btn-secondary {
+      border-color: rgba(134, 157, 191, 0.34);
+      color: #d8e7ff;
+      background: rgba(22, 34, 53, 0.55);
+      backdrop-filter: blur(8px);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(115, 140, 175, 0.18);
+      background: rgba(7, 12, 21, 0.82);
+    }
+    .nav-wrap {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      color: #031220;
+      font-weight: 900;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 14px;
+      color: #bbcee9;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .nav-links a {
+      position: relative;
+      padding: 6px 2px;
+      transition: color var(--transition);
+    }
+    .nav-links a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -2px;
+      height: 2px;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width var(--transition);
+    }
+    .nav-links a:hover { color: #ebf4ff; }
+    .nav-links a:hover::after { width: 100%; }
+
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+    .hero {
+      padding: 74px 0 50px;
+      position: relative;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 34px;
+      align-items: center;
+    }
+    .hero h1 {
+      margin: 14px 0 16px;
+      font-size: clamp(34px, 5.1vw, 64px);
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+      max-width: 760px;
+    }
+    .hero h1 .highlight {
+      color: #b8d8ff;
+      text-shadow: 0 0 24px rgba(45, 124, 255, 0.46);
+    }
+    .hero p {
+      margin: 0 0 26px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.72;
+      max-width: 620px;
+    }
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(130px, 1fr));
+      gap: 12px;
+      max-width: 700px;
+    }
+    .stat {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(137, 159, 192, 0.26);
+      background: rgba(16, 27, 44, 0.62);
+      backdrop-filter: blur(12px);
+    }
+    .stat strong {
+      font-family: var(--mono);
+      display: block;
+      font-size: 19px;
+      margin-bottom: 3px;
+    }
+    .stat span { font-size: 12px; color: #8fa6c5; }
+
+    .dash {
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(126, 153, 192, 0.28);
+      background: linear-gradient(180deg, rgba(18, 33, 54, 0.85), rgba(14, 24, 39, 0.88));
+      box-shadow: var(--shadow);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .dash::before {
+      content: "";
+      position: absolute;
+      inset: -50% -30%;
+      background: conic-gradient(from 90deg, rgba(45,124,255,0) 0deg, rgba(45,124,255,.22) 66deg, rgba(29,228,167,.16) 120deg, rgba(45,124,255,0) 180deg);
+      filter: blur(24px);
+      pointer-events: none;
+    }
+    .dash-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .dash-tabs {
+      display: inline-flex;
+      gap: 7px;
+    }
+    .dash-tab {
+      font-size: 12px;
+      color: #b9cde8;
+      background: rgba(38, 55, 80, 0.68);
+      border: 1px solid rgba(112, 143, 183, 0.3);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+    .dash-tab.active { color: #fff; border-color: rgba(45,124,255,0.6); background: rgba(45,124,255,0.2); }
+
+    .chart {
+      height: 250px;
+      border-radius: 14px;
+      background:
+        linear-gradient(0deg, rgba(95, 123, 160, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(95, 123, 160, 0.12) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(15, 26, 43, 0.7), rgba(12, 20, 34, 0.95));
+      background-size: 40px 40px, 40px 40px, auto;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(112, 144, 185, 0.22);
+      z-index: 1;
+    }
+    .chart svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .signal-pills {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+      z-index: 1;
+      position: relative;
+    }
+    .signal-pill {
+      border: 1px solid rgba(118, 146, 180, 0.23);
+      background: rgba(15, 26, 41, 0.74);
+      border-radius: 12px;
+      padding: 9px 10px;
+      font-size: 12px;
+    }
+    .signal-pill strong {
+      font-family: var(--mono);
+      display: block;
+      color: #e6f0ff;
+      margin-bottom: 2px;
+    }
+
+    .market-strip {
+      margin-top: 24px;
+      border-top: 1px solid rgba(119, 144, 176, 0.22);
+      border-bottom: 1px solid rgba(119, 144, 176, 0.22);
+      background: rgba(10, 19, 32, 0.72);
+    }
+    .ticker {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(6, minmax(150px, 1fr));
+      overflow: auto;
+      padding: 12px 0;
+    }
+    .ticker-item {
+      min-width: 150px;
+      border: 1px solid rgba(115, 139, 174, 0.2);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(17, 29, 47, 0.65);
+    }
+    .ticker-item small { color: #8fa4c2; display: block; font-size: 11px; }
+    .ticker-item strong { display: block; margin: 4px 0; font-family: var(--mono); font-size: 14px; }
+    .ticker-item span { font-family: var(--mono); font-size: 13px; }
+
+    .predictions-grid,
+    .features-grid,
+    .trust-grid,
+    .metrics-grid,
+    .testimonials-grid { display: grid; gap: 16px; }
+
+    .predictions-grid {
+      margin-top: 30px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .panel {
+      border: 1px solid rgba(122, 150, 184, 0.24);
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border-radius: var(--radius);
+      padding: 18px;
+      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+      position: relative;
+    }
+    .panel:hover {
+      transform: translateY(-4px);
+      border-color: rgba(64, 141, 255, 0.52);
+      box-shadow: 0 12px 30px rgba(9, 15, 28, 0.58);
+    }
+
+    .signal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .signal-tag {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(116, 144, 180, 0.34);
+      color: #9fb8db;
+    }
+    .signal-body {
+      display: grid;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: #d4e3f8;
+    }
+    .signal-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .risk {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #bdd2ef;
+      margin-top: 8px;
+    }
+
+    .hint {
+      position: relative;
+      border-bottom: 1px dashed rgba(143, 174, 214, 0.55);
+      cursor: help;
+      color: #d9e8ff;
+    }
+    .hint::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 50%;
+      bottom: 140%;
+      transform: translateX(-50%) translateY(4px);
+      white-space: nowrap;
+      font-size: 11px;
+      font-family: var(--sans);
+      color: #e8f3ff;
+      background: rgba(10, 18, 32, 0.95);
+      border: 1px solid rgba(131, 160, 197, 0.35);
+      border-radius: 8px;
+      padding: 6px 9px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition), transform var(--transition);
+    }
+    .hint:hover::after,
+    .hint:focus-visible::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .features-grid {
+      margin-top: 30px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .feature h3 { margin: 12px 0 10px; font-size: 18px; }
+    .feature p { margin: 0; color: var(--muted); line-height: 1.65; font-size: 14px; }
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      border: 1px solid rgba(124, 152, 186, 0.28);
+      background: rgba(26, 43, 67, 0.6);
+    }
+
+    .platform-preview {
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 16px;
+    }
+    .preview-main,
+    .preview-side { min-height: 320px; }
+
+    .skeleton {
+      position: relative;
+      overflow: hidden;
+      border-radius: 10px;
+      background: linear-gradient(90deg, rgba(25, 42, 65, 0.95) 0%, rgba(36, 59, 91, 0.85) 35%, rgba(25, 42, 65, 0.95) 72%);
+      background-size: 300% 100%;
+      animation: shimmer 1.4s linear infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    .mini-chart {
+      height: 136px;
+      border-radius: 12px;
+      border: 1px solid rgba(117, 146, 181, 0.24);
+      background:
+        linear-gradient(0deg, rgba(95, 123, 160, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(95, 123, 160, 0.1) 1px, transparent 1px),
+        rgba(11, 19, 33, 0.8);
+      background-size: 26px 26px, 26px 26px, auto;
+      position: relative;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .mini-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    .metrics-grid {
+      margin-top: 30px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .metric strong {
+      display: block;
+      font-family: var(--mono);
+      font-size: 28px;
+      margin: 6px 0 8px;
+    }
+    .metric p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+    .chart-card { grid-column: span 2; }
+
+    .performance-bars { margin-top: 16px; display: grid; gap: 10px; }
+    .bar { display: grid; gap: 6px; }
+    .bar-head { display: flex; justify-content: space-between; font-size: 12px; color: #b4cae8; }
+    .bar-track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(114, 141, 178, 0.25);
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .trust-grid {
+      margin-top: 24px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 64px;
+      border-radius: 14px;
+      border: 1px solid rgba(123, 148, 184, 0.22);
+      background: rgba(16, 28, 45, 0.58);
+      color: #b9cce7;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .testimonials-grid {
+      margin-top: 26px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .quote p { margin: 0 0 16px; color: #cbdcf3; line-height: 1.75; font-size: 15px; }
+    .author { color: #e8f2ff; font-weight: 700; }
+    .role { color: #8ea5c5; font-size: 13px; }
+
+    .faq {
+      margin-top: 26px;
+      display: grid;
+      gap: 10px;
+    }
+    details {
+      border: 1px solid rgba(122, 149, 183, 0.22);
+      border-radius: 12px;
+      background: rgba(15, 27, 45, 0.62);
+      padding: 12px 14px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #dce9fb;
+      list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    details p { margin: 10px 0 2px; color: #a9bfdc; line-height: 1.66; font-size: 14px; }
+
+    .cta-final {
+      padding: 38px;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(114, 145, 183, 0.28);
+      background: linear-gradient(135deg, rgba(20, 42, 72, 0.78) 0%, rgba(13, 26, 43, 0.9) 50%, rgba(8, 38, 35, 0.85) 100%);
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .cta-final h2 { margin: 0 0 12px; font-size: clamp(28px, 4vw, 44px); }
+    .cta-final p { margin: 0 auto 20px; color: #b7cae5; max-width: 760px; line-height: 1.75; }
+
+    footer {
+      padding: 24px 0 34px;
+      border-top: 1px solid rgba(117, 142, 174, 0.2);
+      margin-top: 52px;
+    }
+    .footer-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: #90a8c8;
+      font-size: 13px;
+    }
+    .footer-links { display: flex; gap: 14px; flex-wrap: wrap; }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 520ms ease, transform 520ms ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1180px) {
+      .hero-grid,
+      .platform-preview { grid-template-columns: 1fr; }
+      .predictions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .features-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chart-card { grid-column: auto; }
+      .trust-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .testimonials-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 860px) {
+      .nav-wrap { height: auto; padding: 12px 0; flex-direction: column; align-items: stretch; }
+      .nav-links { justify-content: flex-start; }
+      .nav-actions { justify-content: flex-end; }
+      .hero-stats { grid-template-columns: 1fr 1fr; }
+      .signal-pills { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .trust-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ticker { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+    }
+
+    @media (max-width: 560px) {
+      :root { --section-y: 70px; }
+      .container { width: min(1200px, calc(100% - 28px)); }
+      .hero-cta { flex-direction: column; }
+      .hero-cta .btn { width: 100%; }
+      .hero-stats,
+      .predictions-grid,
+      .features-grid,
+      .metrics-grid,
+      .trust-grid,
+      .ticker { grid-template-columns: 1fr; }
+      .cta-final { padding: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <header>
+    <div class="container nav-wrap">
+      <a class="brand" href="#top" aria-label="RaiseBull Home">
+        <span class="brand-mark">RB</span>
+        <span>RaiseBull</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary Navigation">
+        <a href="#markets">Markets</a>
+        <a href="#predictions">Predictions</a>
+        <a href="#signals">Signals</a>
+        <a href="#analytics">Analytics</a>
+        <a href="#strategies">Strategies</a>
+        <a href="#pricing">Pricing</a>
+        <a href="/docs" target="_blank" rel="noopener">API Docs</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a class="btn btn-secondary" href="/app">Login</a>
+        <a class="btn btn-primary" href="#start">Get Started</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="badge"><span class="dot"></span> Institutional-Grade Market Intelligence</span>
+          <h1>Predict market moves with <span class="highlight">AI precision</span> before the crowd reacts.</h1>
+          <p>
+            RaiseBull combines multi-factor forecasting, live technical signals, and financial decision analytics so your team can execute buy/sell strategies with speed and confidence.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#start">Start Free Trial</a>
+            <a class="btn btn-secondary" href="/dashboard">View Live Dashboard</a>
+            <a class="btn btn-secondary" href="/plot-viewer.html">Open Signal Viewer</a>
+          </div>
+
+          <div class="hero-stats">
+            <article class="stat">
+              <strong>94.7%</strong>
+              <span>Signal direction accuracy</span>
+            </article>
+            <article class="stat">
+              <strong>11.3M</strong>
+              <span>Predictions generated / day</span>
+            </article>
+            <article class="stat">
+              <strong>320ms</strong>
+              <span>Average inference latency</span>
+            </article>
+          </div>
+        </div>
+
+        <section class="dash" aria-label="AI dashboard preview">
+          <div class="dash-head">
+            <div class="dash-tabs">
+              <span class="dash-tab active">NASDAQ</span>
+              <span class="dash-tab">S&P 500</span>
+              <span class="dash-tab">Global</span>
+            </div>
+            <span class="badge mono">LIVE · 14:32:18 ET</span>
+          </div>
+
+          <div class="chart" role="img" aria-label="Stock chart with actual and predicted price lines">
+            <svg viewBox="0 0 800 280" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points="0,214 82,191 140,206 200,170 262,182 316,148 372,160 430,131 492,151 552,115 610,128 675,96 732,112 800,82"
+                        fill="none" stroke="rgba(29,228,167,0.9)" stroke-width="3" stroke-linecap="round" />
+              <polyline points="520,162 568,145 618,121 672,108 730,86 800,74"
+                        fill="none" stroke="rgba(45,124,255,0.95)" stroke-width="3.2" stroke-dasharray="9 8" stroke-linecap="round" />
+              <circle cx="732" cy="86" r="5" fill="#2d7cff" />
+              <text x="744" y="84" fill="#c9dcf8" font-size="12" font-family="Inter">Predicted</text>
+            </svg>
+          </div>
+
+          <div class="signal-pills">
+            <div class="signal-pill">
+              <strong>AAPL · BUY ↑</strong>
+              <span class="mono">Conf 91% · Risk Low</span>
+            </div>
+            <div class="signal-pill">
+              <strong>NVDA · HOLD →</strong>
+              <span class="mono">Conf 84% · Risk Medium</span>
+            </div>
+            <div class="signal-pill">
+              <strong>TSLA · SELL ↓</strong>
+              <span class="mono">Conf 88% · Risk High</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="market-strip" id="markets">
+        <div class="container ticker" aria-label="Live market snapshot">
+          <article class="ticker-item">
+            <small>Gainers</small>
+            <strong class="mono">AMD</strong>
+            <span class="up">+5.42%</span>
+          </article>
+          <article class="ticker-item">
+            <small>Losers</small>
+            <strong class="mono">PFE</strong>
+            <span class="down">-3.18%</span>
+          </article>
+          <article class="ticker-item">
+            <small>Trending</small>
+            <strong class="mono">NVDA</strong>
+            <span class="up">+2.91%</span>
+          </article>
+          <article class="ticker-item">
+            <small>S&P 500</small>
+            <strong class="mono">5,164.82</strong>
+            <span class="up">+0.63%</span>
+          </article>
+          <article class="ticker-item">
+            <small>NASDAQ</small>
+            <strong class="mono">17,980.15</strong>
+            <span class="up">+0.88%</span>
+          </article>
+          <article class="ticker-item">
+            <small>DOW JONES</small>
+            <strong class="mono">39,843.57</strong>
+            <span class="down">-0.14%</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="predictions">
+      <div class="container">
+        <span class="badge">AI Predictions</span>
+        <h2 class="section-title">Signal panels built for real trading decisions</h2>
+        <p class="section-copy">Every model output includes current price, forecast target, confidence score, direction signal, and risk grading so you can act with context, not guesswork.</p>
+
+        <div class="predictions-grid" id="signals">
+          <article class="panel reveal">
+            <div class="signal-head">
+              <strong class="mono">AAPL</strong>
+              <span class="signal-tag">BUY ↑</span>
+            </div>
+            <div class="signal-body">
+              <div class="signal-row"><span>Current</span><strong>$191.42</strong></div>
+              <div class="signal-row"><span>Predicted</span><strong class="up">$198.95</strong></div>
+              <div class="signal-row"><span><span tabindex="0" class="hint" data-tip="Model confidence for projected direction">Confidence</span></span><strong>92%</strong></div>
+            </div>
+            <div class="risk"><span>Risk:</span><strong class="mono">Low</strong></div>
+          </article>
+
+          <article class="panel reveal">
+            <div class="signal-head">
+              <strong class="mono">MSFT</strong>
+              <span class="signal-tag">BUY ↑</span>
+            </div>
+            <div class="signal-body">
+              <div class="signal-row"><span>Current</span><strong>$418.66</strong></div>
+              <div class="signal-row"><span>Predicted</span><strong class="up">$429.14</strong></div>
+              <div class="signal-row"><span>Confidence</span><strong>89%</strong></div>
+            </div>
+            <div class="risk"><span>Risk:</span><strong class="mono">Low-Med</strong></div>
+          </article>
+
+          <article class="panel reveal">
+            <div class="signal-head">
+              <strong class="mono">TSLA</strong>
+              <span class="signal-tag">SELL ↓</span>
+            </div>
+            <div class="signal-body">
+              <div class="signal-row"><span>Current</span><strong>$180.53</strong></div>
+              <div class="signal-row"><span>Predicted</span><strong class="down">$171.82</strong></div>
+              <div class="signal-row"><span>Confidence</span><strong>87%</strong></div>
+            </div>
+            <div class="risk"><span>Risk:</span><strong class="mono">High</strong></div>
+          </article>
+
+          <article class="panel reveal">
+            <div class="signal-head">
+              <strong class="mono">NVDA</strong>
+              <span class="signal-tag">BUY ↑</span>
+            </div>
+            <div class="signal-body">
+              <div class="signal-row"><span>Current</span><strong>$921.12</strong></div>
+              <div class="signal-row"><span>Predicted</span><strong class="up">$947.08</strong></div>
+              <div class="signal-row"><span>Confidence</span><strong>90%</strong></div>
+            </div>
+            <div class="risk"><span>Risk:</span><strong class="mono">Medium</strong></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="analytics">
+      <div class="container">
+        <span class="badge">Platform Capabilities</span>
+        <h2 class="section-title">A complete intelligence stack for analysts and traders</h2>
+        <p class="section-copy">From real-time factors and forecasting pipelines to scenario simulation and portfolio construction, RaiseBull is designed for institutional-grade execution.</p>
+
+        <div class="features-grid">
+          <article class="panel feature reveal">
+            <div class="feature-icon">⏱</div>
+            <h3>Real-Time Analytics</h3>
+            <p>Sub-second market feed processing with cross-asset monitoring and structured anomaly detection.</p>
+          </article>
+
+          <article class="panel feature reveal">
+            <div class="feature-icon">🧠</div>
+            <h3>AI Forecasting</h3>
+            <p>Hybrid transformer + ensemble models generate directional and price-range forecasts per ticker.</p>
+          </article>
+
+          <article class="panel feature reveal">
+            <div class="feature-icon">📐</div>
+            <h3>Technical Indicators</h3>
+            <p>Built-in indicator libraries with adaptive thresholds for momentum, volatility, and trend quality.</p>
+          </article>
+
+          <article class="panel feature reveal">
+            <div class="feature-icon">🔁</div>
+            <h3>Backtesting Engine</h3>
+            <p>Replay strategies on historical datasets with robust slippage, latency, and transaction cost models.</p>
+          </article>
+
+          <article class="panel feature reveal">
+            <div class="feature-icon">📰</div>
+            <h3>Sentiment Analysis</h3>
+            <p>News, transcripts, and social sentiment are scored and linked to market reaction probabilities.</p>
+          </article>
+
+          <article class="panel feature reveal">
+            <div class="feature-icon">🎯</div>
+            <h3>Portfolio Optimization</h3>
+            <p>Constraint-based optimization across risk budgets, factor exposure, and expected return targets.</p>
+          </article>
+
+          <article class="panel feature reveal" id="strategies">
+            <div class="feature-icon">🧩</div>
+            <h3>Strategy Builder</h3>
+            <p>Visual rule composer to create, test, and deploy quantitative signal pipelines without friction.</p>
+          </article>
+
+          <article class="panel feature reveal" id="pricing">
+            <div class="feature-icon">💼</div>
+            <h3>Institutional Pricing</h3>
+            <p>Flexible plans for teams, funds, and enterprise desks with role-based controls and API limits.</p>
+          </article>
+        </div>
+
+        <div class="platform-preview">
+          <article class="panel preview-main reveal">
+            <span class="badge">Platform Preview</span>
+            <h3 style="margin:14px 0 10px;">Professional trading cockpit</h3>
+            <p style="margin:0;color:var(--muted);">Multi-panel workspace linking watchlists, model confidence, strategy health, and order readiness.</p>
+            <div class="mini-chart" role="img" aria-label="Strategy equity curve preview">
+              <svg viewBox="0 0 700 180" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="0,150 80,142 128,129 172,132 230,116 292,102 350,105 412,90 470,81 530,67 590,57 650,44 700,38"
+                          fill="none" stroke="rgba(29,228,167,0.95)" stroke-width="3" stroke-linecap="round"/>
+                <polyline points="0,158 88,152 146,138 198,141 260,129 320,118 380,124 440,111 500,100 560,94 620,84 700,74"
+                          fill="none" stroke="rgba(45,124,255,0.95)" stroke-width="2.4" stroke-dasharray="7 7" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </article>
+
+          <article class="panel preview-side reveal">
+            <span class="badge">Service Slides</span>
+            <h3 style="margin:14px 0 12px;">Explore the full platform</h3>
+            <div style="display:grid;gap:10px;">
+              <a class="btn btn-secondary" href="/app">AI Assistant Workspace</a>
+              <a class="btn btn-secondary" href="/dashboard">Analytics Dashboard</a>
+              <a class="btn btn-secondary" href="/plot-viewer.html">Prediction Plot Viewer</a>
+              <a class="btn btn-secondary" href="/float.html">Floating Market UI</a>
+              <a class="btn btn-secondary" href="/map.html">Market Map</a>
+              <a class="btn btn-secondary" href="/docs" target="_blank" rel="noopener">API Docs</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <span class="badge">Performance & Credibility</span>
+        <h2 class="section-title">Validated model performance with transparent evidence</h2>
+        <p class="section-copy">Track forecast accuracy, model drift, source reliability, and historical strategy outcomes through continuously audited metrics.</p>
+
+        <div class="metrics-grid">
+          <article class="panel metric reveal">
+            <small class="mono">Accuracy Rate</small>
+            <strong>94.7%</strong>
+            <p>Directional prediction hit rate across top-volume equities over rolling 18-month windows.</p>
+          </article>
+
+          <article class="panel metric reveal">
+            <small class="mono">Historical Validation</small>
+            <strong>7.8y</strong>
+            <p>Backtested across multiple cycles including high-volatility and low-liquidity regimes.</p>
+          </article>
+
+          <article class="panel metric reveal">
+            <small class="mono">Data Sources</small>
+            <strong>36+</strong>
+            <p>Market, macro, filings, sentiment, and alternative signals unified in one analytics pipeline.</p>
+          </article>
+
+          <article class="panel metric reveal">
+            <small class="mono">Signal Throughput</small>
+            <strong>850k/h</strong>
+            <p>Live buy/sell updates scored and ranked by confidence, risk, and strategy fit.</p>
+          </article>
+
+          <article class="panel chart-card reveal">
+            <small class="mono">Model Performance Chart</small>
+            <div class="performance-bars">
+              <div class="bar">
+                <div class="bar-head"><span>Transformer Ensemble</span><strong class="mono">96%</strong></div>
+                <div class="bar-track"><div class="bar-fill" style="width:96%"></div></div>
+              </div>
+              <div class="bar">
+                <div class="bar-head"><span>Regime Classifier</span><strong class="mono">91%</strong></div>
+                <div class="bar-track"><div class="bar-fill" style="width:91%"></div></div>
+              </div>
+              <div class="bar">
+                <div class="bar-head"><span>Execution Timing Model</span><strong class="mono">88%</strong></div>
+                <div class="bar-track"><div class="bar-fill" style="width:88%"></div></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel reveal">
+            <small class="mono">Live Validation</small>
+            <div class="skeleton" style="height:12px;margin-top:14px"></div>
+            <div class="skeleton" style="height:12px;margin-top:10px;width:85%"></div>
+            <div class="skeleton" style="height:12px;margin-top:10px;width:70%"></div>
+            <p style="margin-top:14px;color:#9bb2d1;font-size:13px;">Continuous confidence recalibration and drift monitoring in production.</p>
+          </article>
+        </div>
+
+        <div class="trust-grid">
+          <div class="trust-badge">SOC 2</div>
+          <div class="trust-badge">ISO 27001</div>
+          <div class="trust-badge">FINRA-Ready</div>
+          <div class="trust-badge">Encrypted API</div>
+          <div class="trust-badge">99.99% Uptime</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <span class="badge">What Professionals Say</span>
+        <h2 class="section-title">Trusted by quant teams, advisors, and active traders</h2>
+        <p class="section-copy">RaiseBull supports discretionary and systematic workflows with explainable outputs and enterprise-grade reliability.</p>
+
+        <div class="testimonials-grid">
+          <article class="panel quote reveal">
+            <p>“RaiseBull replaced three separate tools for our team. Signal quality is strong, and the confidence/risk context made execution significantly better.”</p>
+            <div class="author">Elena Martinez</div>
+            <div class="role">Head of Equities, NorthPeak Capital</div>
+          </article>
+
+          <article class="panel quote reveal">
+            <p>“The backtesting and live model validation have been excellent. We can move from idea to deployable strategy in hours, not weeks.”</p>
+            <div class="author">Jason Wu</div>
+            <div class="role">Lead Quant Strategist, AxisFlow</div>
+          </article>
+
+          <article class="panel quote reveal">
+            <p>“Institutional quality UI, clean analytics, and practical signal cards. Our desk uses RaiseBull daily for timing entries and exits.”</p>
+            <div class="author">Priya Raman</div>
+            <div class="role">Portfolio Manager, StellarOne Advisors</div>
+          </article>
+        </div>
+
+        <div class="faq" aria-label="Frequently asked questions">
+          <details open>
+            <summary>How are buy/sell signals generated?</summary>
+            <p>Signals are generated from multi-model ensembles using price action, technical indicators, liquidity context, sentiment streams, and macro features.</p>
+          </details>
+          <details>
+            <summary>Can we validate strategies on historical data?</summary>
+            <p>Yes. The platform includes full historical replay, walk-forward testing, and performance attribution with customizable execution assumptions.</p>
+          </details>
+          <details>
+            <summary>Does RaiseBull offer API access?</summary>
+            <p>Yes. REST endpoints expose predictions, signals, indicator values, and portfolio analytics. Visit API Docs from the top navigation.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="start">
+      <div class="container">
+        <div class="cta-final">
+          <h2>Turn market noise into structured decision advantage.</h2>
+          <p>Start your free trial to access AI stock prediction, buy/sell signal intelligence, model analytics, and strategy tooling in one institutional-grade platform.</p>
+          <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+            <a class="btn btn-primary" href="/app">Start Free Trial</a>
+            <a class="btn btn-secondary" href="/dashboard">Open Live Analytics</a>
+            <a class="btn btn-secondary" href="/docs" target="_blank" rel="noopener">Review API Docs</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-wrap">
+      <span>© 2026 RaiseBull · AI Market Intelligence Platform</span>
+      <div class="footer-links">
+        <a href="/app">Platform</a>
+        <a href="/dashboard">Analytics</a>
+        <a href="/plot-viewer.html">Signals</a>
+        <a href="/docs" target="_blank" rel="noopener">API Docs</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const revealEls = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.12 });
+    revealEls.forEach((el) => io.observe(el));
+
+    const detailsEls = document.querySelectorAll('details');
+    detailsEls.forEach((item) => {
+      item.addEventListener('toggle', () => {
+        if (!item.open) return;
+        detailsEls.forEach((other) => {
+          if (other !== item) other.open = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

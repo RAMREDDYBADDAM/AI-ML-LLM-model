@@ -7,6 +7,253 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
+    <!-- Interactive Background Elements -->
+    <div class="animated-bg"></div>
+    <div class="grid-pattern"></div>
+    <div class="noise-overlay"></div>
+    
+    <!-- Floating Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    
+    <!-- Floating Particles -->
+    <div class="particles-container">
+      <div class="particle particle-1"></div>
+      <div class="particle particle-2"></div>
+      <div class="particle particle-3"></div>
+      <div class="particle particle-4"></div>
+      <div class="particle particle-5"></div>
+      <div class="particle particle-6"></div>
+    </div>
+    
+    <!-- Floating Shapes -->
+    <div class="shape shape-circle" style="top: 15%; left: 5%;"></div>
+    <div class="shape shape-square" style="top: 60%; right: 8%;"></div>
+    <div class="shape shape-circle" style="bottom: 20%; left: 70%; width: 150px; height: 150px;"></div>
+    
+    <!-- Financial Symbols Animation -->
+    <div class="financial-symbols" id="financial-symbols"></div>
+    
+    <!-- Waves at Bottom -->
+    <div class="waves-container">
+      <div class="wave wave-1"></div>
+      <div class="wave wave-2"></div>
+      <div class="wave wave-3"></div>
+    </div>
+    
+    <!-- Chart Pattern -->
+    <div class="chart-pattern"></div>
+    
+    <!-- Mouse Follower Gradient -->
+    <div class="mouse-gradient" id="mouse-gradient"></div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+    
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-overlay" id="shortcuts-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>⌨️ Keyboard Shortcuts</h2>
+          <button class="modal-close" onclick="closeShortcutsModal()">×</button>
+        </div>
+        <div class="shortcut-list">
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Open Command Palette</span>
+            <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>K</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Toggle Dark Mode</span>
+            <div class="shortcut-keys"><kbd>Ctrl</kbd><kbd>D</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Go to Financial RAG</span>
+            <div class="shortcut-keys"><kbd>1</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Go to Insights</span>
+            <div class="shortcut-keys"><kbd>2</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Go to S&P 500 Analytics</span>
+            <div class="shortcut-keys"><kbd>3</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Go to S&P 500 Chat</span>
+            <div class="shortcut-keys"><kbd>4</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Focus Search/Question</span>
+            <div class="shortcut-keys"><kbd>/</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Scroll to Top</span>
+            <div class="shortcut-keys"><kbd>T</kbd></div>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Show Shortcuts</span>
+            <div class="shortcut-keys"><kbd>?</kbd></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Command Palette -->
+    <div class="command-palette-overlay" id="command-palette">
+      <div class="command-palette">
+        <div class="command-input-container">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" class="command-input" id="command-input" placeholder="Type a command or search..." autocomplete="off" />
+          <kbd style="background:#f3f4f6;padding:4px 8px;border-radius:4px;font-size:11px;color:#6b7280">ESC</kbd>
+        </div>
+        <div class="command-results" id="command-results">
+          <div class="command-group">
+            <div class="command-group-title">Navigation</div>
+            <div class="command-item" data-action="nav-rag">
+              <div class="command-item-icon">📊</div>
+              <div class="command-item-text">
+                <div class="command-item-title">Financial RAG</div>
+                <div class="command-item-desc">Ask questions about S&P 500 companies</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>1</kbd></div>
+            </div>
+            <div class="command-item" data-action="nav-insights">
+              <div class="command-item-icon">💡</div>
+              <div class="command-item-text">
+                <div class="command-item-title">Insights</div>
+                <div class="command-item-desc">View financial analytics and trends</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>2</kbd></div>
+            </div>
+            <div class="command-item" data-action="nav-sp500">
+              <div class="command-item-icon">📈</div>
+              <div class="command-item-text">
+                <div class="command-item-title">S&P 500 Analytics</div>
+                <div class="command-item-desc">Historical visualizations and analysis</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>3</kbd></div>
+            </div>
+            <div class="command-item" data-action="nav-chat">
+              <div class="command-item-icon">💬</div>
+              <div class="command-item-text">
+                <div class="command-item-title">S&P 500 Chat</div>
+                <div class="command-item-desc">Natural language market analysis</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>4</kbd></div>
+            </div>
+          </div>
+          <div class="command-group">
+            <div class="command-group-title">Actions</div>
+            <div class="command-item" data-action="toggle-dark">
+              <div class="command-item-icon">🌙</div>
+              <div class="command-item-text">
+                <div class="command-item-title">Toggle Dark Mode</div>
+                <div class="command-item-desc">Switch between light and dark themes</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>Ctrl</kbd><kbd>D</kbd></div>
+            </div>
+            <div class="command-item" data-action="refresh-data">
+              <div class="command-item-icon">🔄</div>
+              <div class="command-item-text">
+                <div class="command-item-title">Refresh Data</div>
+                <div class="command-item-desc">Reload current tab data</div>
+              </div>
+            </div>
+            <div class="command-item" data-action="show-shortcuts">
+              <div class="command-item-icon">⌨️</div>
+              <div class="command-item-text">
+                <div class="command-item-title">Keyboard Shortcuts</div>
+                <div class="command-item-desc">View all available shortcuts</div>
+              </div>
+              <div class="command-item-shortcut"><kbd>?</kbd></div>
+            </div>
+            <div class="command-item" data-action="toggle-bg">
+              <div class="command-item-icon">✨</div>
+              <div class="command-item-text">
+                <div class="command-item-title">Toggle Background Effects</div>
+                <div class="command-item-desc">Enable/disable animated background</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sidebar Navigation -->
+    <button class="sidebar-toggle" id="sidebar-toggle" title="Open Navigation">
+      <span>›</span>
+    </button>
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h3>📊 Financial RAG</h3>
+        <button class="sidebar-close" id="sidebar-close">×</button>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-nav-item active" data-tab="rag">
+          <span>📊</span>
+          <span>Financial RAG</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="insights">
+          <span>💡</span>
+          <span>Insights Dashboard</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="sp500">
+          <span>📈</span>
+          <span>S&P 500 Analytics</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="sp500-chat">
+          <span>💬</span>
+          <span>S&P 500 Chat</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="upload">
+          <span>📁</span>
+          <span>Upload Data</span>
+        </button>
+      </nav>
+      <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--neutral-200);">
+        <div style="font-size: 11px; color: var(--neutral-500); margin-bottom: 12px;">Quick Settings</div>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; padding: 8px 0;">
+          <input type="checkbox" id="sidebar-dark-mode" style="width: auto;" />
+          <span>🌙 Dark Mode</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; padding: 8px 0;">
+          <input type="checkbox" id="sidebar-auto-refresh" style="width: auto;" />
+          <span>🔄 Auto Refresh</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; padding: 8px 0;">
+          <input type="checkbox" id="sidebar-bg-animations" style="width: auto;" checked />
+          <span>✨ Background Effects</span>
+        </label>
+      </div>
+    </div>
+    
+    <!-- Floating Action Buttons -->
+    <div class="fab-container" id="fab-container">
+      <button class="fab fab-mini fab-shortcuts" onclick="openShortcutsModal()" title="Keyboard Shortcuts">
+        <span class="fab-tooltip">Shortcuts</span>
+        ⌨️
+      </button>
+      <button class="fab fab-mini fab-help" onclick="showHelp()" title="Help">
+        <span class="fab-tooltip">Help</span>
+        ❓
+      </button>
+      <button class="fab fab-mini fab-scroll-top" onclick="scrollToTop()" title="Scroll to Top">
+        <span class="fab-tooltip">Top</span>
+        ↑
+      </button>
+      <button class="fab fab-mini fab-dark-mode" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+        <span class="fab-tooltip">Dark Mode</span>
+        🌙
+      </button>
+      <button class="fab fab-main ripple" onclick="toggleFab()" title="Quick Actions">
+        ＋
+      </button>
+    </div>
+
     <div class="browser-frame">
       <div class="browser-top">
         <div class="tabs">
@@ -27,9 +274,9 @@
 
       <div class="browser-content">
         <!-- Financial RAG Tab -->
-        <div id="tab-rag" class="tab-content">
+        <div id="tab-rag" class="tab-content slide-in-up">
           <div class="grid-2">
-            <div class="card">
+            <div class="card interactive-card">
               <div class="card-header">
                 <h1 class="card-title">Financial RAG — S&P 500</h1>
                 <p class="card-subtitle">Ask questions about S&P 500 companies using AI</p>
@@ -37,18 +284,21 @@
               
               <h3>Quick Company Links</h3>
               <div id="sp500-companies-list" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px">
-                <p class="loading" style="grid-column:1/-1">Loading companies...</p>
+                <div class="skeleton skeleton-text full"></div>
+                <div class="skeleton skeleton-text full"></div>
+                <div class="skeleton skeleton-text full"></div>
+                <div class="skeleton skeleton-text full"></div>
               </div>
               
               <label for="question">Your Question</label>
-              <textarea id="question" placeholder="What are the top S&P 500 companies? Tell me about Apple. Show me Tesla performance.">What are the top S&P 500 companies?</textarea>
-              <button id="ask" class="mt-4">Ask Question</button>
+              <textarea id="question" class="glow-effect" placeholder="What are the top S&P 500 companies? Tell me about Apple. Show me Tesla performance.">What are the top S&P 500 companies?</textarea>
+              <button id="ask" class="mt-4 ripple">Ask Question</button>
               
               <h2>Answer</h2>
               <pre id="answer" class="loading">(waiting)</pre>
             </div>
             
-            <div class="card">
+            <div class="card interactive-card">
               <div class="card-header">
                 <h2 class="card-title">Financial Plot</h2>
                 <p class="card-subtitle">Visual analysis of metrics and trends</p>
@@ -76,11 +326,12 @@
           </div>
           
           <!-- Live Market Trend Section -->
-          <div class="card mt-4" style="margin-top:20px">
+          <div class="card mt-4 interactive-card" style="margin-top:20px">
             <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
               <div>
                 <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
-                  <span style="color:#ef4444;font-size:12px">🔴 LIVE</span>
+                  <span class="pulse-dot"></span>
+                  <span style="color:#ef4444;font-size:12px">LIVE</span>
                   S&P 500 Market Trend
                 </h2>
                 <p class="card-subtitle">Real-time index performance from Yahoo Finance</p>
@@ -274,21 +525,29 @@
           
           <!-- Summary Metrics -->
           <div id="sp500-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
-            <div class="metric-card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
+            <div class="metric-card bounce-effect" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
               <h3>Latest S&P 500</h3>
-              <div class="value" id="latest-sp500">-</div>
+              <div class="value" id="latest-sp500">
+                <span class="skeleton skeleton-text short" style="display:inline-block;width:80px;height:32px;background:rgba(255,255,255,0.2)"></span>
+              </div>
             </div>
-            <div class="metric-card" style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%)">
+            <div class="metric-card bounce-effect" style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%)">
               <h3>Date Range</h3>
-              <div class="value" style="font-size:14px" id="date-range">-</div>
+              <div class="value" style="font-size:14px" id="date-range">
+                <span class="skeleton skeleton-text medium" style="display:inline-block;width:120px;height:20px;background:rgba(255,255,255,0.2)"></span>
+              </div>
             </div>
-            <div class="metric-card" style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%)">
+            <div class="metric-card bounce-effect" style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%)">
               <h3>Avg PE10</h3>
-              <div class="value" id="avg-pe10">-</div>
+              <div class="value" id="avg-pe10">
+                <span class="skeleton skeleton-text short" style="display:inline-block;width:60px;height:32px;background:rgba(255,255,255,0.2)"></span>
+              </div>
             </div>
-            <div class="metric-card" style="background:linear-gradient(135deg,#fa709a 0%,#fee140 100%)">
+            <div class="metric-card bounce-effect" style="background:linear-gradient(135deg,#fa709a 0%,#fee140 100%)">
               <h3>Max Drawdown</h3>
-              <div class="value" id="max-drawdown">-</div>
+              <div class="value" id="max-drawdown">
+                <span class="skeleton skeleton-text short" style="display:inline-block;width:70px;height:32px;background:rgba(255,255,255,0.2)"></span>
+              </div>
             </div>
           </div>
           
@@ -352,19 +611,25 @@
           </div>
           
           <!-- Live Market Ticker Bar - US Markets Only -->
-          <div id="live-ticker-bar" style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:white;padding:16px;border-radius:12px;margin-bottom:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-            <div style="text-align:center">
-              <div style="font-size:11px;text-transform:uppercase;opacity:0.6">S&P 500</div>
+          <div id="live-ticker-bar" style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:white;padding:16px;border-radius:12px;margin-bottom:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+            <div class="bounce-effect" style="text-align:center;padding:8px;border-radius:8px;cursor:pointer;transition:background 0.2s">
+              <div style="font-size:11px;text-transform:uppercase;opacity:0.6;display:flex;align-items:center;justify-content:center;gap:4px">
+                <span class="pulse-dot" style="width:6px;height:6px"></span> S&P 500
+              </div>
               <div id="live-sp500-price" style="font-size:28px;font-weight:bold">--</div>
               <div id="live-sp500-change" style="font-size:14px">--</div>
             </div>
-            <div style="text-align:center">
-              <div style="font-size:11px;text-transform:uppercase;opacity:0.6">DOW JONES</div>
+            <div class="bounce-effect" style="text-align:center;padding:8px;border-radius:8px;cursor:pointer;transition:background 0.2s">
+              <div style="font-size:11px;text-transform:uppercase;opacity:0.6;display:flex;align-items:center;justify-content:center;gap:4px">
+                <span class="pulse-dot" style="width:6px;height:6px"></span> DOW JONES
+              </div>
               <div id="live-dow-price" style="font-size:28px;font-weight:bold">--</div>
               <div id="live-dow-change" style="font-size:14px">--</div>
             </div>
-            <div style="text-align:center">
-              <div style="font-size:11px;text-transform:uppercase;opacity:0.6">NASDAQ</div>
+            <div class="bounce-effect" style="text-align:center;padding:8px;border-radius:8px;cursor:pointer;transition:background 0.2s">
+              <div style="font-size:11px;text-transform:uppercase;opacity:0.6;display:flex;align-items:center;justify-content:center;gap:4px">
+                <span class="pulse-dot" style="width:6px;height:6px"></span> NASDAQ
+              </div>
               <div id="live-nasdaq-price" style="font-size:28px;font-weight:bold">--</div>
               <div id="live-nasdaq-change" style="font-size:14px">--</div>
             </div>
@@ -394,26 +659,32 @@
               
               <!-- Quick Questions with Selection State (Task 3) -->
               <h2 style="font-size:14px;margin-top:24px;margin-bottom:12px;color:#64748b;font-weight:500">
-                Quick Questions
+                Quick Questions <span style="font-size:11px;color:#94a3b8">(click to ask)</span>
               </h2>
               <div id="quick-questions-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <button class="quick-question" data-q="What is the current S&P 500 trend?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                <button class="quick-question bounce-effect" data-q="What is the current S&P 500 trend?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
                   <span style="font-size:16px">📈</span> <span>Current Trend</span>
                 </button>
-                <button class="quick-question" data-q="Show me year-over-year growth rates" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                <button class="quick-question bounce-effect" data-q="Show me year-over-year growth rates" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
                   <span style="font-size:16px">📊</span> <span>YoY Growth</span>
                 </button>
-                <button class="quick-question" data-q="How volatile is the S&P 500?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                <button class="quick-question bounce-effect" data-q="How volatile is the S&P 500?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
                   <span style="font-size:16px">⚡</span> <span>Volatility Analysis</span>
                 </button>
-                <button class="quick-question" data-q="What are the correlations with other metrics?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                <button class="quick-question bounce-effect" data-q="What are the correlations with other metrics?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
                   <span style="font-size:16px">🔗</span> <span>Correlations</span>
                 </button>
-                <button class="quick-question" data-q="Compare performance across decades" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                <button class="quick-question bounce-effect" data-q="Compare performance across decades" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
                   <span style="font-size:16px">📅</span> <span>Decade Comparison</span>
                 </button>
-                <button class="quick-question" data-q="What is the PE10 valuation today?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                <button class="quick-question bounce-effect" data-q="What is the PE10 valuation today?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
                   <span style="font-size:16px">💰</span> <span>Valuation (PE10)</span>
+                </button>
+                <button class="quick-question bounce-effect" data-q="What was the best performing decade?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                  <span style="font-size:16px">🏆</span> <span>Best Decade</span>
+                </button>
+                <button class="quick-question bounce-effect" data-q="What is the market outlook?" style="padding:12px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;font-size:13px;transition:all 0.15s;display:flex;align-items:center;gap:8px">
+                  <span style="font-size:16px">🔮</span> <span>Market Outlook</span>
                 </button>
               </div>
             </div>
@@ -2268,6 +2539,627 @@
             
             return `<p style="margin:0">${formatted}</p>`
           }
+        </script>
+        
+        <!-- Interactive UI System -->
+        <script>
+          // ==================== Toast Notification System ====================
+          
+          function showToast(title, message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toast-container')
+            const toast = document.createElement('div')
+            toast.className = `toast ${type}`
+            
+            const icons = {
+              success: '✅',
+              error: '❌',
+              warning: '⚠️',
+              info: 'ℹ️'
+            }
+            
+            toast.innerHTML = `
+              <span class="toast-icon">${icons[type] || icons.info}</span>
+              <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+              </div>
+              <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `
+            
+            container.appendChild(toast)
+            
+            // Auto-remove after duration
+            setTimeout(() => {
+              toast.classList.add('toast-out')
+              setTimeout(() => toast.remove(), 300)
+            }, duration)
+            
+            return toast
+          }
+          
+          // ==================== Dark Mode Toggle ====================
+          
+          function toggleDarkMode() {
+            const html = document.documentElement
+            const isDark = html.getAttribute('data-theme') === 'dark'
+            
+            if (isDark) {
+              html.removeAttribute('data-theme')
+              localStorage.setItem('theme', 'light')
+              document.getElementById('sidebar-dark-mode').checked = false
+              showToast('Theme Changed', 'Switched to light mode', 'info', 2000)
+            } else {
+              html.setAttribute('data-theme', 'dark')
+              localStorage.setItem('theme', 'dark')
+              document.getElementById('sidebar-dark-mode').checked = true
+              showToast('Theme Changed', 'Switched to dark mode', 'info', 2000)
+            }
+          }
+          
+          // Load saved theme
+          (function() {
+            const savedTheme = localStorage.getItem('theme')
+            if (savedTheme === 'dark') {
+              document.documentElement.setAttribute('data-theme', 'dark')
+              setTimeout(() => {
+                const checkbox = document.getElementById('sidebar-dark-mode')
+                if (checkbox) checkbox.checked = true
+              }, 100)
+            }
+          })()
+          
+          // Sync sidebar checkbox with dark mode
+          document.getElementById('sidebar-dark-mode')?.addEventListener('change', function() {
+            toggleDarkMode()
+          })
+          
+          // ==================== Floating Action Button ====================
+          
+          function toggleFab() {
+            const container = document.getElementById('fab-container')
+            container.classList.toggle('open')
+          }
+          
+          function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            showToast('Scrolled', 'Back to top', 'info', 1500)
+          }
+          
+          function showHelp() {
+            showToast('Need Help?', 'Press ? for keyboard shortcuts or use the chat feature to ask questions about the data.', 'info', 5000)
+          }
+          
+          // Close FAB when clicking outside
+          document.addEventListener('click', (e) => {
+            const fabContainer = document.getElementById('fab-container')
+            if (!fabContainer.contains(e.target) && fabContainer.classList.contains('open')) {
+              fabContainer.classList.remove('open')
+            }
+          })
+          
+          // ==================== Sidebar Navigation ====================
+          
+          const sidebar = document.getElementById('sidebar')
+          const sidebarToggle = document.getElementById('sidebar-toggle')
+          const sidebarClose = document.getElementById('sidebar-close')
+          
+          sidebarToggle?.addEventListener('click', () => {
+            sidebar.classList.add('open')
+          })
+          
+          sidebarClose?.addEventListener('click', () => {
+            sidebar.classList.remove('open')
+          })
+          
+          // Close sidebar when clicking outside
+          document.addEventListener('click', (e) => {
+            if (sidebar.classList.contains('open') && 
+                !sidebar.contains(e.target) && 
+                !sidebarToggle.contains(e.target)) {
+              sidebar.classList.remove('open')
+            }
+          })
+          
+          // Sidebar navigation items
+          document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+              const tabName = item.getAttribute('data-tab')
+              switchTab(tabName)
+              sidebar.classList.remove('open')
+              
+              // Update active state
+              document.querySelectorAll('.sidebar-nav-item').forEach(i => i.classList.remove('active'))
+              item.classList.add('active')
+            })
+          })
+          
+          // Tab switching helper
+          function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab')
+            const tabContents = document.querySelectorAll('.tab-content')
+            
+            tabs.forEach(t => t.classList.remove('active'))
+            const activeTab = document.querySelector(`.tab[data-tab="${tabName}"]`)
+            if (activeTab) activeTab.classList.add('active')
+            
+            tabContents.forEach(content => {
+              if (content.id === `tab-${tabName}`) {
+                content.classList.remove('hidden')
+                content.classList.add('slide-in-up')
+                
+                // Load data based on tab
+                if (tabName === 'insights') loadInsights()
+                if (tabName === 'sp500') { initSP500DateFilters(); loadSP500Dashboard() }
+                if (tabName === 'sp500-chat') initChatTab()
+              } else {
+                content.classList.add('hidden')
+              }
+            })
+            
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+              item.classList.toggle('active', item.getAttribute('data-tab') === tabName)
+            })
+          }
+          
+          // ==================== Keyboard Shortcuts ====================
+          
+          function openShortcutsModal() {
+            document.getElementById('shortcuts-modal').classList.add('active')
+          }
+          
+          function closeShortcutsModal() {
+            document.getElementById('shortcuts-modal').classList.remove('active')
+          }
+          
+          // Close modal when clicking overlay
+          document.getElementById('shortcuts-modal')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+              closeShortcutsModal()
+            }
+          })
+          
+          // ==================== Command Palette ====================
+          
+          let commandPaletteSelectedIndex = 0
+          const commandActions = {
+            'nav-rag': () => switchTab('rag'),
+            'nav-insights': () => switchTab('insights'),
+            'nav-sp500': () => switchTab('sp500'),
+            'nav-chat': () => switchTab('sp500-chat'),
+            'toggle-dark': () => toggleDarkMode(),
+            'toggle-bg': () => {
+              const checkbox = document.getElementById('sidebar-bg-animations')
+              if (checkbox) {
+                checkbox.checked = !checkbox.checked
+                checkbox.dispatchEvent(new Event('change'))
+              }
+            },
+            'refresh-data': () => {
+              location.reload()
+              showToast('Refreshing', 'Reloading page data...', 'info', 2000)
+            },
+            'show-shortcuts': () => {
+              closeCommandPalette()
+              openShortcutsModal()
+            }
+          }
+          
+          function openCommandPalette() {
+            document.getElementById('command-palette').classList.add('active')
+            document.getElementById('command-input').focus()
+            commandPaletteSelectedIndex = 0
+            updateCommandSelection()
+          }
+          
+          function closeCommandPalette() {
+            document.getElementById('command-palette').classList.remove('active')
+            document.getElementById('command-input').value = ''
+            filterCommands('')
+          }
+          
+          function filterCommands(query) {
+            const items = document.querySelectorAll('.command-item')
+            const lowerQuery = query.toLowerCase()
+            
+            items.forEach(item => {
+              const title = item.querySelector('.command-item-title')?.textContent.toLowerCase() || ''
+              const desc = item.querySelector('.command-item-desc')?.textContent.toLowerCase() || ''
+              
+              if (title.includes(lowerQuery) || desc.includes(lowerQuery) || !query) {
+                item.style.display = 'flex'
+              } else {
+                item.style.display = 'none'
+              }
+            })
+            
+            commandPaletteSelectedIndex = 0
+            updateCommandSelection()
+          }
+          
+          function updateCommandSelection() {
+            const visibleItems = Array.from(document.querySelectorAll('.command-item')).filter(i => i.style.display !== 'none')
+            visibleItems.forEach((item, i) => {
+              item.classList.toggle('selected', i === commandPaletteSelectedIndex)
+            })
+          }
+          
+          function executeSelectedCommand() {
+            const visibleItems = Array.from(document.querySelectorAll('.command-item')).filter(i => i.style.display !== 'none')
+            const selected = visibleItems[commandPaletteSelectedIndex]
+            if (selected) {
+              const action = selected.getAttribute('data-action')
+              if (commandActions[action]) {
+                closeCommandPalette()
+                commandActions[action]()
+              }
+            }
+          }
+          
+          // Command palette input handling
+          document.getElementById('command-input')?.addEventListener('input', (e) => {
+            filterCommands(e.target.value)
+          })
+          
+          document.getElementById('command-input')?.addEventListener('keydown', (e) => {
+            const visibleItems = Array.from(document.querySelectorAll('.command-item')).filter(i => i.style.display !== 'none')
+            
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              commandPaletteSelectedIndex = Math.min(commandPaletteSelectedIndex + 1, visibleItems.length - 1)
+              updateCommandSelection()
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              commandPaletteSelectedIndex = Math.max(commandPaletteSelectedIndex - 1, 0)
+              updateCommandSelection()
+            } else if (e.key === 'Enter') {
+              e.preventDefault()
+              executeSelectedCommand()
+            }
+          })
+          
+          // Command item click handling
+          document.querySelectorAll('.command-item').forEach(item => {
+            item.addEventListener('click', () => {
+              const action = item.getAttribute('data-action')
+              if (commandActions[action]) {
+                closeCommandPalette()
+                commandActions[action]()
+              }
+            })
+          })
+          
+          // Close command palette on overlay click
+          document.getElementById('command-palette')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('command-palette-overlay')) {
+              closeCommandPalette()
+            }
+          })
+          
+          // ==================== Global Keyboard Shortcuts ====================
+          
+          document.addEventListener('keydown', (e) => {
+            // Ignore if typing in input
+            const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
+            
+            // Command Palette: Ctrl+K
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+              e.preventDefault()
+              if (document.getElementById('command-palette').classList.contains('active')) {
+                closeCommandPalette()
+              } else {
+                openCommandPalette()
+              }
+              return
+            }
+            
+            // Dark Mode: Ctrl+D
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+              e.preventDefault()
+              toggleDarkMode()
+              return
+            }
+            
+            // Escape: Close modals
+            if (e.key === 'Escape') {
+              closeCommandPalette()
+              closeShortcutsModal()
+              sidebar.classList.remove('open')
+              document.getElementById('fab-container').classList.remove('open')
+              return
+            }
+            
+            // Skip remaining shortcuts if typing
+            if (isTyping) return
+            
+            // Number keys for tab navigation
+            if (e.key === '1') { e.preventDefault(); switchTab('rag') }
+            if (e.key === '2') { e.preventDefault(); switchTab('insights') }
+            if (e.key === '3') { e.preventDefault(); switchTab('sp500') }
+            if (e.key === '4') { e.preventDefault(); switchTab('sp500-chat') }
+            if (e.key === '5') { e.preventDefault(); switchTab('upload') }
+            
+            // Slash for focus search
+            if (e.key === '/') {
+              e.preventDefault()
+              const questionInput = document.getElementById('question') || 
+                                    document.getElementById('sp500-question')
+              if (questionInput) {
+                questionInput.focus()
+                showToast('Search', 'Type your question...', 'info', 1500)
+              }
+            }
+            
+            // T for scroll to top
+            if (e.key === 't' || e.key === 'T') {
+              scrollToTop()
+            }
+            
+            // ? for shortcuts
+            if (e.key === '?') {
+              openShortcutsModal()
+            }
+          })
+          
+          // ==================== Enhanced Loading States ====================
+          
+          function showSkeleton(container, type = 'card') {
+            const skeletons = {
+              card: `
+                <div class="skeleton-card">
+                  <div class="skeleton skeleton-title"></div>
+                  <div class="skeleton skeleton-text full"></div>
+                  <div class="skeleton skeleton-text medium"></div>
+                  <div class="skeleton skeleton-text short"></div>
+                </div>
+              `,
+              chart: `
+                <div class="skeleton skeleton-chart"></div>
+              `,
+              table: `
+                <div class="skeleton-card">
+                  <div class="skeleton skeleton-text full"></div>
+                  <div class="skeleton skeleton-text full"></div>
+                  <div class="skeleton skeleton-text full"></div>
+                  <div class="skeleton skeleton-text medium"></div>
+                </div>
+              `
+            }
+            
+            container.innerHTML = skeletons[type] || skeletons.card
+          }
+          
+          // ==================== Auto Refresh Toggle ====================
+          
+          document.getElementById('sidebar-auto-refresh')?.addEventListener('change', function() {
+            const autoRefreshCheckbox = document.getElementById('auto-refresh-plot')
+            if (autoRefreshCheckbox) {
+              autoRefreshCheckbox.checked = this.checked
+              autoRefreshCheckbox.dispatchEvent(new Event('change'))
+            }
+            
+            if (this.checked) {
+              showToast('Auto Refresh', 'Data will refresh automatically', 'success', 2000)
+            } else {
+              showToast('Auto Refresh', 'Automatic refresh disabled', 'info', 2000)
+            }
+          })
+          
+          // ==================== Background Animations Toggle ====================
+          
+          document.getElementById('sidebar-bg-animations')?.addEventListener('change', function() {
+            toggleBackgroundAnimations(this.checked)
+            
+            if (this.checked) {
+              showToast('Visual Effects', 'Background animations enabled', 'info', 2000)
+            } else {
+              showToast('Visual Effects', 'Background animations disabled for better performance', 'info', 2000)
+            }
+          })
+          
+          // ==================== Welcome Toast ====================
+          
+          setTimeout(() => {
+            showToast(
+              'Welcome to Financial RAG!',
+              'Press Ctrl+K for commands or ? for keyboard shortcuts',
+              'info',
+              5000
+            )
+          }, 1000)
+          
+          // ==================== Smooth Tab Animations ====================
+          
+          // Add animation classes when switching tabs
+          const originalTabClickHandler = () => {}
+          document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+              const tabName = this.getAttribute('data-tab')
+              const content = document.getElementById(`tab-${tabName}`)
+              if (content) {
+                content.classList.remove('slide-in-up')
+                // Trigger reflow
+                void content.offsetWidth
+                content.classList.add('slide-in-up')
+              }
+            })
+          })
+          
+          // ==================== Progress Indicator ====================
+          
+          function showProgress(containerId, percent) {
+            const container = document.getElementById(containerId)
+            if (!container) return
+            
+            let progressBar = container.querySelector('.progress-bar')
+            if (!progressBar) {
+              progressBar = document.createElement('div')
+              progressBar.className = 'progress-bar'
+              progressBar.innerHTML = '<div class="progress-bar-fill" style="width: 0%"></div>'
+              container.insertBefore(progressBar, container.firstChild)
+            }
+            
+            const fill = progressBar.querySelector('.progress-bar-fill')
+            fill.style.width = `${percent}%`
+            
+            if (percent >= 100) {
+              setTimeout(() => progressBar.remove(), 500)
+            }
+          }
+          
+          console.log('🎨 Interactive UI System loaded!')
+          console.log('📌 Keyboard shortcuts: Press ? to view all shortcuts')
+          console.log('🔍 Command palette: Press Ctrl+K to open')
+          
+          // ==================== Interactive Background Effects ====================
+          
+          // Mouse Follower Gradient
+          const mouseGradient = document.getElementById('mouse-gradient')
+          let mouseX = 0, mouseY = 0
+          let currentX = 0, currentY = 0
+          
+          document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX
+            mouseY = e.clientY
+            mouseGradient.classList.add('active')
+          })
+          
+          document.addEventListener('mouseleave', () => {
+            mouseGradient.classList.remove('active')
+          })
+          
+          // Smooth follow animation
+          function animateMouseGradient() {
+            const ease = 0.08
+            currentX += (mouseX - currentX) * ease
+            currentY += (mouseY - currentY) * ease
+            
+            mouseGradient.style.left = currentX + 'px'
+            mouseGradient.style.top = currentY + 'px'
+            
+            requestAnimationFrame(animateMouseGradient)
+          }
+          animateMouseGradient()
+          
+          // Generate Financial Symbols
+          function createFinancialSymbols() {
+            const container = document.getElementById('financial-symbols')
+            if (!container) return
+            
+            const symbols = ['$', '€', '£', '¥', '₿', '📈', '📊', '💹', '💰', '%']
+            const count = 15
+            
+            for (let i = 0; i < count; i++) {
+              const symbol = document.createElement('span')
+              symbol.className = 'fin-symbol'
+              symbol.textContent = symbols[Math.floor(Math.random() * symbols.length)]
+              symbol.style.left = Math.random() * 100 + '%'
+              symbol.style.animationDuration = (15 + Math.random() * 20) + 's'
+              symbol.style.animationDelay = -(Math.random() * 15) + 's'
+              symbol.style.fontSize = (16 + Math.random() * 20) + 'px'
+              container.appendChild(symbol)
+            }
+          }
+          createFinancialSymbols()
+          
+          // Create Sparkle Effects on Click
+          document.addEventListener('click', (e) => {
+            createSparkle(e.clientX, e.clientY)
+          })
+          
+          function createSparkle(x, y) {
+            const sparkleCount = 6
+            for (let i = 0; i < sparkleCount; i++) {
+              const sparkle = document.createElement('div')
+              sparkle.className = 'sparkle'
+              sparkle.style.position = 'fixed'
+              sparkle.style.left = x + 'px'
+              sparkle.style.top = y + 'px'
+              sparkle.style.zIndex = '9999'
+              
+              // Random offset
+              const angle = (i / sparkleCount) * Math.PI * 2
+              const distance = 20 + Math.random() * 30
+              const offsetX = Math.cos(angle) * distance
+              const offsetY = Math.sin(angle) * distance
+              
+              sparkle.style.setProperty('--offset-x', offsetX + 'px')
+              sparkle.style.setProperty('--offset-y', offsetY + 'px')
+              
+              sparkle.animate([
+                { transform: 'scale(0) translate(0, 0)', opacity: 1 },
+                { transform: `scale(1) translate(${offsetX}px, ${offsetY}px)`, opacity: 0.8 },
+                { transform: `scale(0) translate(${offsetX * 1.5}px, ${offsetY * 1.5}px)`, opacity: 0 }
+              ], {
+                duration: 600,
+                easing: 'ease-out'
+              })
+              
+              document.body.appendChild(sparkle)
+              setTimeout(() => sparkle.remove(), 600)
+            }
+          }
+          
+          // Parallax effect for shapes on scroll
+          let lastScrollY = window.scrollY
+          const shapes = document.querySelectorAll('.shape')
+          
+          window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY
+            const delta = scrollY - lastScrollY
+            
+            shapes.forEach((shape, index) => {
+              const speed = 0.02 + (index * 0.01)
+              const currentTransform = shape.style.transform || ''
+              const yOffset = scrollY * speed
+              shape.style.transform = `translateY(${-yOffset}px)`
+            })
+            
+            lastScrollY = scrollY
+          }, { passive: true })
+          
+          // Interactive Orbs - subtle movement towards mouse
+          const orbs = document.querySelectorAll('.orb')
+          
+          document.addEventListener('mousemove', (e) => {
+            const centerX = window.innerWidth / 2
+            const centerY = window.innerHeight / 2
+            const moveX = (e.clientX - centerX) / 50
+            const moveY = (e.clientY - centerY) / 50
+            
+            orbs.forEach((orb, index) => {
+              const factor = (index + 1) * 0.3
+              orb.style.transform = `translate(${moveX * factor}px, ${moveY * factor}px)`
+            })
+          })
+          
+          // Background preference toggle
+          let bgAnimationsEnabled = true
+          
+          function toggleBackgroundAnimations(enabled) {
+            bgAnimationsEnabled = enabled
+            const elements = [
+              '.animated-bg', '.particles-container', '.shape', 
+              '.orb', '.waves-container', '.chart-pattern', '.financial-symbols'
+            ]
+            
+            elements.forEach(selector => {
+              document.querySelectorAll(selector).forEach(el => {
+                el.style.animationPlayState = enabled ? 'running' : 'paused'
+                el.style.opacity = enabled ? '' : '0'
+              })
+            })
+            
+            localStorage.setItem('bgAnimations', enabled ? '1' : '0')
+          }
+          
+          // Load background animation preference
+          const savedBgPref = localStorage.getItem('bgAnimations')
+          if (savedBgPref === '0') {
+            toggleBackgroundAnimations(false)
+          }
+          
+          console.log('✨ Interactive backgrounds loaded!')
         </script>
       </div>
     </div>
